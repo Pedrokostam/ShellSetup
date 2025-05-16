@@ -63,7 +63,7 @@ function y {
 }
 
 function qq {
-    if ($env:IS_YAZI) {
+    if ($env:YAZI_LEVEL) {
         exit
     }
     else {
