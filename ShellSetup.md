@@ -17,7 +17,7 @@ To include add the following section:
 [include]
 	path = <path to myconfig>
 ```
-or using default path:
+or using default path (Windows):
 ```
 [include]
 	path = ~/Documents/PowerShell/myconfig.gitconfig

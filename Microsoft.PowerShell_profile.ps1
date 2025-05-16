@@ -73,7 +73,7 @@ function qq {
 
 # Load custom stuff for current host
 $private:currentUserCurrentHost = "$psscriptroot/Microsoft.Powershell_profile_custom.ps1"
-if(Test-Path $private:currentUserCurrentHost){
+if((Test-Path $private:currentUserCurrentHost) -and ((Get-Item $private:currentUserCurrentHost | % Length) -gt 0)){
 	. $private:currentUserCurrentHost
 }
 
