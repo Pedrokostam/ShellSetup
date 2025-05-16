@@ -15,5 +15,10 @@ The file `myconfig.gitconfig` should be manually included in your main `.gitconf
 To include add the following section:
 ```
 [include]
-	path = "<path to myconfig>"
+	path = <path to myconfig>
+```
+or using default path:
+```
+[include]
+	path = ~/Documents/PowerShell/myconfig.gitconfig
 ```

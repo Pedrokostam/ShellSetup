@@ -1,1 +1,19 @@
+# To include this file add to your .gitconfig (~/.gitconfig)
+# [include]
+# path = <path to this file>
+# # Paths accept the tilde character
+# By default the path should look like this ~/Documents/PowerShell/myconfig.gitconfig
 [alias]
+	ci = commit
+    amend = commit --amend
+	st = status
+	sts = status -s
+    co = checkout
+    cob = checkout -b
+    d = diff
+    ds = diff --stat
+    dc = diff --cached
+	lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)' --all
+	adog = log --all --decorate --oneline --graph
+	a = !git add $@ && git status
+	au = !git add -u && git status
