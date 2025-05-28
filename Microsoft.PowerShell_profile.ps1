@@ -5,7 +5,7 @@
 "@ | invoke-expression
 
 Register-EngineEvent -SourceIdentifier 'PowerShell.OnIdle' -MaxTriggerCount 1 -Action {
-    Import-Module -Name Posh -Global
+  Import-Module -Name Posh -Global
     Import-Module -Name Terminal-Icons -Global
 } | Out-Null
 
@@ -17,11 +17,11 @@ $env:POSH_GIT_ENABLED = $true
 set-psreadlinekeyhandler -chord tab -function menucomplete
 
 function Measure-Profile([string]$path = $profile) {
-    Write-Host "Measuring $path"
+  Write-Host "Measuring $path"
     pwsh -NoProfile -Command "measure-Script -Path $path"
 }
 function touch {
-    [CmdletBinding()]
+  [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
         [ValidateLength(1, [int]::MaxValue)]
@@ -34,48 +34,52 @@ function touch {
         [Parameter()]
         [switch]
         $ModificationOnly
-    )
-    if (-not (Test-Path $LiteralPath)) {
+        )
+      if (-not (Test-Path $LiteralPath)) {
         $null = New-Item -ItemType File -Path $LiteralPath
-    }
-    $item = Get-Item $LiteralPath
+      }
+  $item = Get-Item $LiteralPath
     if (-not $ModificationOnly.IsPresent) {
-        $item.LastAccessTime = [datetime]::now
+      $item.LastAccessTime = [datetime]::now
     }
-    if (-not $AccessOnly.IsPresent) {
-        $item.LastWriteTime = [datetime]::now
-    }
-    Get-Item $LiteralPath
+  if (-not $AccessOnly.IsPresent) {
+    $item.LastWriteTime = [datetime]::now
+  }
+  Get-Item $LiteralPath
 }
 
 function killff {
-    Stop-Process -name firefox
+  Stop-Process -name firefox
 }
 
 function y {
-    $tmp = [System.IO.Path]::GetTempFileName()
+  $tmp = [System.IO.Path]::GetTempFileName()
     yazi $args --cwd-file="$tmp"
     $cwd = Get-Content -Path $tmp -Encoding UTF8
     if (-not [String]::IsNullOrEmpty($cwd) -and $cwd -ne $PWD.Path) {
-        Set-Location -LiteralPath ([System.IO.Path]::GetFullPath($cwd))
+      Set-Location -LiteralPath ([System.IO.Path]::GetFullPath($cwd))
     }
-    Remove-Item -Path $tmp
+  Remove-Item -Path $tmp
 }
 
 function qq {
-    if ($env:IS_YAZI) {
-        exit
-    }
-    else {
-        Write-error "No Yazi instance detected"
-    }
+  if ($env:YAZI_LEVEL) {
+    exit
+  }
+  else {
+    Write-error "No Yazi instance detected"
+  }
 }
 
 
 # Load custom stuff for current host
 $private:currentUserCurrentHost = "$psscriptroot/Microsoft.Powershell_profile_custom.ps1"
 if((Test-Path $private:currentUserCurrentHost) -and ((Get-Item $private:currentUserCurrentHost | % Length) -gt 0)){
-	. $private:currentUserCurrentHost
+  . $private:currentUserCurrentHost
 }
 
+<<<<<<< HEAD
 Invoke-Expression (& { (zoxide init powershell | Out-String) })
+=======
+
+>>>>>>> bdbb4ec9497ae4acb0f75999042fe95b01c4d006
