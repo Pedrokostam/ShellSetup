@@ -78,8 +78,4 @@ if((Test-Path $private:currentUserCurrentHost) -and ((Get-Item $private:currentU
   . $private:currentUserCurrentHost
 }
 
-<<<<<<< HEAD
 Invoke-Expression (& { (zoxide init powershell | Out-String) })
-=======
-
->>>>>>> bdbb4ec9497ae4acb0f75999042fe95b01c4d006
