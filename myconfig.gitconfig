@@ -19,3 +19,5 @@
 	adog = log --all --decorate --oneline --graph
 	a = !git add $@ && git status
 	au = !git add -u && git status
+	ignore-locally = git update-index --assume-unchanged
+	unignore-locally = git update-index --no-assume-unchanged
