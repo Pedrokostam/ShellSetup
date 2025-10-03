@@ -1,4 +1,4 @@
-oh-my-posh init pwsh --config "$profile/../kostamfive.omp.yaml" | invoke-expression
+oh-my-posh init pwsh --config "$PSScriptRoot/../oh-my-posh/kostamfive.omp.yaml" | invoke-expression
 Register-EngineEvent -SourceIdentifier 'PowerShell.OnIdle' -MaxTriggerCount 1 -Action {
   set-psreadlinekeyhandler -chord tab -function menucomplete
   Import-Module -Name Posh -Global
@@ -11,9 +11,4 @@ function touch { [CmdletBinding()] param ([Parameter(Mandatory)][ValidateLength(
 function y { $tmp = [System.IO.Path]::GetTempFileName(); yazi $args --cwd-file="$tmp"; $cwd = Get-Content -Path $tmp -Encoding UTF8; if (-not [String]::IsNullOrEmpty($cwd) -and $cwd -ne $PWD.Path) { Set-Location -LiteralPath ([System.IO.Path]::GetFullPath($cwd)) }; Remove-Item -Path $tmp }
 function qq { if ($env:YAZI_LEVEL) { exit } else { Write-error "No Yazi instance detected" } }
 function Get-PoshUpdates{pushd $profile/..; git pull; oh-my-posh upgrade; popd}
-# Load custom stuff for current host
-$private:currentUserCurrentHost = "$psscriptroot/Microsoft.Powershell_profile_custom.ps1"
-if ((Test-Path $private:currentUserCurrentHost) -and ((Get-Item $private:currentUserCurrentHost | ForEach-Object Length) -gt 0)) {
-  . $private:currentUserCurrentHost
-}
 Invoke-Expression (& { (zoxide init powershell | Out-String) })
