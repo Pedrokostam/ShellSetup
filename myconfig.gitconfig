@@ -21,3 +21,4 @@
 	au = !git add -u && git status
 	ignore-locally = update-index --assume-unchanged
 	unignore-locally = update-index --no-assume-unchanged
+	url = config --get remote.origin.url
