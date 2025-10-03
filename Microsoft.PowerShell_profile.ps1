@@ -10,6 +10,7 @@ function Measure-Profile([string]$path = $profile) { Write-Host "Measuring $path
 function touch { [CmdletBinding()] param ([Parameter(Mandatory)][ValidateLength(1, [int]::MaxValue)][Alias('Path')][string]$LiteralPath, [Parameter()][switch]$AccessOnly, [Parameter()][switch]$ModificationOnly ) if (-not (Test-Path $LiteralPath)) { $null = New-Item -ItemType File -Path $LiteralPath }; $item = Get-Item $LiteralPath; if (-not $ModificationOnly.IsPresent) { $item.LastAccessTime = [datetime]::now }; if (-not $AccessOnly.IsPresent) { $item.LastWriteTime = [datetime]::now }; Get-Item $LiteralPath}
 function y { $tmp = [System.IO.Path]::GetTempFileName(); yazi $args --cwd-file="$tmp"; $cwd = Get-Content -Path $tmp -Encoding UTF8; if (-not [String]::IsNullOrEmpty($cwd) -and $cwd -ne $PWD.Path) { Set-Location -LiteralPath ([System.IO.Path]::GetFullPath($cwd)) }; Remove-Item -Path $tmp }
 function qq { if ($env:YAZI_LEVEL) { exit } else { Write-error "No Yazi instance detected" } }
+function Get-PoshUpdates{ git pull; oh-my-posh upgrade}
 # Load custom stuff for current host
 $private:currentUserCurrentHost = "$psscriptroot/Microsoft.Powershell_profile_custom.ps1"
 if ((Test-Path $private:currentUserCurrentHost) -and ((Get-Item $private:currentUserCurrentHost | ForEach-Object Length) -gt 0)) {
