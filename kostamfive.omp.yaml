@@ -2,7 +2,7 @@
 
 var:
   head_last_char: 6
-  head_length: 20
+  head_length: 28
 blocks:
 - type: prompt
   alignment: left
