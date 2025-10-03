@@ -22,3 +22,8 @@ or using default path (Windows):
 [include]
 	path = ~/Documents/PowerShell/myconfig.gitconfig
 ```
+the easiest way to do this is to run the following command
+```
+git config --global include.path ~/Documents/PowerShell/myconfig.gitconfig
+```
+or run `Setup.ps1`
