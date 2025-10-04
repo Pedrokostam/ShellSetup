@@ -3,7 +3,7 @@ $git = Get-Command git
 if(-not $git){
 	Write-Error "Git is not installed!!!"
 }else{
-	$gitconfigPath = Get-Item $psscriptroot/myconfig.gitconfig | % FullName
+	$gitconfigPath = Get-Item $psscriptroot/git/myconfig.gitconfig | % FullName
 	Write-Host "Including file '$gitconfigPath' in the global git configuration... " -NoNewLine -Foreground Green
 	git config --global include.path $gitconfigPath
 	Write-Host "DONE" -Foreground Green

@@ -11,4 +11,6 @@ function touch { [CmdletBinding()] param ([Parameter(Mandatory)][ValidateLength(
 function y { $tmp = [System.IO.Path]::GetTempFileName(); yazi $args --cwd-file="$tmp"; $cwd = Get-Content -Path $tmp -Encoding UTF8; if (-not [String]::IsNullOrEmpty($cwd) -and $cwd -ne $PWD.Path) { Set-Location -LiteralPath ([System.IO.Path]::GetFullPath($cwd)) }; Remove-Item -Path $tmp }
 function qq { if ($env:YAZI_LEVEL) { exit } else { Write-error "No Yazi instance detected" } }
 function Get-PoshUpdates{pushd $profile/..; git pull; oh-my-posh upgrade; popd}
-Invoke-Expression (& { (zoxide init powershell | Out-String) })
+if(Get-Command zoxide -ea SilentlyContinue){
+	Invoke-Expression (& { (zoxide init powershell | Out-String) })
+}

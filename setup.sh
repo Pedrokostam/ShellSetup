@@ -31,3 +31,8 @@ else
 		echo "$SOURCE_LINE"
 	} >> "$HOME/.bashrc"
 fi
+
+if command -v pwsh &> /dev/null
+then
+	pwsh "$SCRIPT_DIR/Setup.ps1"
+fi
