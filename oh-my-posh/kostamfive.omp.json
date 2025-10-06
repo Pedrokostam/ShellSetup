@@ -3,7 +3,7 @@
   "version": 3,
   "final_space": true,
   "async": true,
-  "console_title_template": "{{ .Shell }} in {{ .Folder }}",
+  "console_title_template": "{{ .Folder }} - {{ .Shell }}{{if .WSL }} (WSL){{ end }}",
   "var": {
     "head_last_char": 6,
     "head_length": 28
@@ -19,61 +19,47 @@
             "windows": ""
           },
           "style": "powerline",
-          "template": " {{ if .WSL }}WSL at{{ end }}{{ .Icon }} {{ .HostName }} ",
-          "foreground": "#b243c5"
+          "template": "{{ .Icon }} {{ .HostName }}{{ if .WSL }} (WSL){{ end }} ",
+          "foreground": "lightBlue"
         },
         {
           "type": "path",
           "properties": {
             "folder_icon": "...",
-            "folder_separator_icon": "/",
-            "home_icon": " ",
+            "folder_separator_icon": "<darkGray>/</>",
             "mapped_locations": {
-              "C:/Users/Pedro/Documents/GitHub": "",
-              "C:/Users/Pedro/OneDrive": "",
-              "C:/Users/Pedro/OneDrive/FLACBAZA": "",
-              "C:/WORK/Github/Endeas": "<#EEFF30>Endeas</>",
-              "C:/WORK/SVN": "<#06cbc1>SVN</>"
+              "re:(.*/FLACBAZA)": " ",
+              "~/Downloads": " "
             },
-            "max_depth": 2,
-            "mixed_threshold": 8,
-            "style": "agnoster_short"
+            "max_depth": 3,
+            "max_width": 60,
+            "style": "powerlevel"
           },
           "style": "plain",
-          "powerline_symbol": "",
-          "template": " {{ .Path }} ",
-          "foreground": "#30779f"
+          "template": "{{ .Path }} ",
+          "foreground": "lightGreen"
         },
         {
+          "type": "git",
           "properties": {
-            "branch_gone_icon": "",
-            "branch_icon": " ",
-            "branch_identical_icon": "",
             "branch_max_length": 100,
-            "fetch_stash_count": true,
+            "fetch_stash_count": false,
             "fetch_status": false
           },
-          "style": "powerline",
-          "leading_diamond": "<transparent,background></>",
-          "trailing_diamond": "",
-          "template": "{{ $head:= trim .HEAD }}{{ $front:=sub (sub .Var.head_length .Var.head_last_char) 1 }}{{ $len:= len $head }}{{ if gt $len (.Var.head_length) }} {{ trunc $front $head }}…{{ trunc (mul -1 .Var.head_last_char) $head }}{{ else }}{{ .HEAD }}{{ end }}{{if .BranchStatus }} {{ .BranchStatus }}{{ end }}{{ if .Working.Changed }} <transparent></>{{ .Working.String }}</>{{ end }}{{ if .Staging.Changed }} <transparent></> {{ .Staging.String }}</>{{ end }}{{ if gt .StashCount 0 }} <transparent></> <#121318> {{ .StashCount }}</>{{ end }} ",
-          "foreground": "#f2f3f8",
-          "powerline_symbol": "",
-          "background": "#275504",
-          "type": "git",
-          "background_templates": [
-            "{{ if or (.Working.Changed) (.Staging.Changed) }}#a83434{{ end }}",
-            "{{ if and (gt .Ahead 0) (gt .Behind 0) }}#54433a{{ end }}",
-            "{{ if gt .Ahead 0 }}#744d89{{ end }}",
-            "{{ if gt .Behind 0 }}#744d89{{ end }}"
-          ]
+          "style": "plain",
+          "template": "{{ $front:=sub (sub .Var.head_length .Var.head_last_char) 1 }}{{ $branch := .HEAD }}{{$prefix := regexFind \"^(.+)/\" $branch}}{{ $rest := trimPrefix $prefix $branch}}{{ $len:= len $rest }}{{$prefix := regexReplaceAll \"release/\" $prefix \"𝌚 /\" }}{{$prefix := regexReplaceAll \"bug.*/\" $prefix \" /\" }}{{$prefix := regexReplaceAll \"hot.*/\" $prefix \"🔥/\" }}{{$prefix}}{{ if gt $len (.Var.head_length) }} {{ trunc $front $rest }}…{{ trunc (mul -1 .Var.head_last_char) $rest }}{{ else }}{{ $rest }}{{ end }} ",
+          "foreground": "cyan",
+          "mapped_branches": {
+            "feat*/*": "𝌚",
+            "release/2025-2": "⚙",
+            "bug*/*": "🐛",
+            "hot*/*": "🔥"
+          }
         },
         {
-          "style": "powerline",
-          "template": "  {{ .Major }}.{{ .Minor }} ",
-          "foreground": "#100e23",
-          "powerline_symbol": "",
-          "background": "#906cff",
+          "style": "plain",
+          "template": " {{ .Major }}.{{ .Minor }} ",
+          "foreground": "yellow",
           "type": "python"
         }
       ]
@@ -87,31 +73,25 @@
             "always_enabled": true,
             "style": "austin"
           },
-          "style": "powerline",
-          "template": " {{ .FormattedMs }} ",
-          "foreground": "#dddddd",
-          "powerline_symbol": "",
-          "background": "#585858",
-          "type": "executiontime",
-          "invert_powerline": true
+          "style": "plain",
+          "template": " {{ .FormattedMs }}",
+          "foreground": "red",
+          "type": "executiontime"
         },
         {
           "properties": {
             "time_format": "15:04:05"
           },
-          "style": "diamond",
-          "trailing_diamond": "",
-          "template": "{{ .CurrentDate | date .Format }}",
-          "foreground": "#f2f3f8",
-          "background": "#a73f00",
-          "type": "time",
-          "invert_powerline": true
+          "style": "plain",
+          "template": " {{ .CurrentDate | date .Format }}",
+          "foreground": "lightMagenta",
+          "type": "time"
         },
         {
           "type": "shell",
           "style": "plain",
-          "foreground": "#f2f3f8",
-          "background": "#5F3467"
+          "template": " {{ .Name }}",
+          "foreground": "green"
         }
       ]
     },
@@ -120,10 +100,9 @@
       "alignment": "left",
       "segments": [
         {
-          "style": "powerline",
-          "template": "{{ if .Root }}{{else}}{{end}}<b>{{ .UserName }}  </b>",
-          "foreground": "#ff0000",
-          "background": "background",
+          "style": "plain",
+          "template": "{{ if .Root }}{{else}}{{end}}<b><lightRed>{{ .UserName }}</>></b>",
+          "foreground": "default",
           "type": "session"
         }
       ],
