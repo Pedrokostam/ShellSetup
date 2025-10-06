@@ -92,7 +92,7 @@ blocks:
     trailing_diamond: 
     template: " {{ .CurrentDate | date .Format }} "
     foreground: "#f2f3f8"
-    background: "#a73f00"
+    background: "#073f00"
     type: time
     invert_powerline: true
 - type: prompt
@@ -101,7 +101,7 @@ blocks:
   - style: powerline
     template: "{{ if .Root }}\uf0e7{{else}}{{end}}<b>{{ .UserName }} \uf101</b>"
     foreground: "#ff0000"
-    background: <transparent>
+    background: background
     type: session
   newline: true
 version: 3

@@ -2,7 +2,6 @@
 # [include]
 # path = <path to this file>
 # # Paths accept the tilde character
-# By default the path should look like this ~/Documents/PowerShell/myconfig.gitconfig
 [alias]
 	ci = commit
 	cim = commit -m
@@ -22,3 +21,6 @@
 	ignore-locally = update-index --assume-unchanged
 	unignore-locally = update-index --no-assume-unchanged
 	url = config --get remote.origin.url
+	ba = branch --all
+	bl = branch --list
+	br = branch --remotes

@@ -1,4 +1,4 @@
-oh-my-posh init pwsh --config "$PSScriptRoot/../oh-my-posh/kostamfive.omp.yaml" | invoke-expression
+oh-my-posh init pwsh --config "$PSScriptRoot/../oh-my-posh/kostamfive.omp.json" | invoke-expression
 Register-EngineEvent -SourceIdentifier 'PowerShell.OnIdle' -MaxTriggerCount 1 -Action {
   set-psreadlinekeyhandler -chord tab -function menucomplete
   Import-Module -Name Posh -Global
