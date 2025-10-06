@@ -3,7 +3,7 @@ $git = Get-Command git
 if(-not $git){
 	Write-Error "Git is not installed!!!"
 }else{
-	$gitconfigPath = Get-Item $psscriptroot/myconfig.gitconfig | % FullName
+	$gitconfigPath = Get-Item $psscriptroot/git/myconfig.gitconfig | % FullName
 	Write-Host "Including file '$gitconfigPath' in the global git configuration... " -NoNewLine -Foreground Green
 	git config --global include.path $gitconfigPath
 	Write-Host "DONE" -Foreground Green
@@ -29,7 +29,8 @@ foreach ($mod in $modules){
 	Write-Host "Installing $mod..." -Foreground Green
 	Install-Module -Name $mod
 }
-$line = ". $PSScriptRoot/pwsh/Profile_Kostam.ps1"
+$profileCustomPath = gi "$PSScriptRoot/pwsh/Profile_Kostam.ps1" | % fullname
+$line = ". $profileCustomPath"
 if(Test-Path $Profile){
 	if((Get-Content $Profile -Raw) -notmatch 'Profile_Kostam\.ps1'){
 		Write-Host "Adding line to user's profile"
