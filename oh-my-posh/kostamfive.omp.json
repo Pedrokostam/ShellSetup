@@ -34,7 +34,7 @@
     "time": "p:lightMagenta",
     "shell": "p:green",
     "session": "p:red",
-    "session_sep": "default"
+    "session_sep": "p:lightCyan"
   },
   "blocks": [
     {
