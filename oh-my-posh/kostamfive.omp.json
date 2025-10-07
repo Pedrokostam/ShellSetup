@@ -44,7 +44,6 @@
         {
           "type": "os",
           "properties": {
-            "windows": ""
           },
           "style": "powerline",
           "template": "{{ .Icon }} {{ .HostName }}{{ if .WSL }} (WSL){{ end }} ",
