@@ -8,6 +8,33 @@
     "head_last_char": 6,
     "head_length": 28
   },
+  "palette": {
+    "black": "#282C34",
+    "blue": "#61AFEF",
+    "lightBlack": "#282C34",
+    "lightBlue": "#61AFEF",
+    "lightCyan": "#56B6C2",
+    "lightGreen": "#98C379",
+    "lightMagenta": "#C678DD",
+    "lightRed": "#E06C75",
+    "lightWhite": "#DCDFE4",
+    "lightYellow": "#E5C07B",
+    "cyan": "#56B6C2",
+    "green": "#98C379",
+    "magenta": "#C678DD",
+    "red": "#E06C75",
+    "white": "#DCDFE4",
+    "yellow": "#E5C07B",
+    "background": "transparent",
+    "os": "p:lightBlue",
+    "path": "p:lightGreen",
+    "git": "p:cyan",
+    "python": "p:yellow",
+    "executiontime": "p:red",
+    "time": "p:lightMagenta",
+    "shell": "p:green",
+    "session": "p:default"
+  },
   "blocks": [
     {
       "type": "prompt",
@@ -20,7 +47,8 @@
           },
           "style": "powerline",
           "template": "{{ .Icon }} {{ .HostName }}{{ if .WSL }} (WSL){{ end }} ",
-          "foreground": "lightBlue"
+          "background": "p:background",
+          "foreground": "p:os"
         },
         {
           "type": "path",
@@ -37,7 +65,8 @@
           },
           "style": "plain",
           "template": "{{ .Path }} ",
-          "foreground": "lightGreen"
+          "background": "p:background",
+          "foreground": "p:path"
         },
         {
           "type": "git",
@@ -48,19 +77,21 @@
           },
           "style": "plain",
           "template": "{{ $front:=sub (sub .Var.head_length .Var.head_last_char) 1 }}{{ $branch := .HEAD }}{{$prefix := regexFind \"^(.+)/\" $branch}}{{ $rest := trimPrefix $prefix $branch}}{{ $len:= len $rest }}{{$prefix := regexReplaceAll \"release/\" $prefix \"𝌚 /\" }}{{$prefix := regexReplaceAll \"bug.*/\" $prefix \" /\" }}{{$prefix := regexReplaceAll \"hot.*/\" $prefix \"🔥/\" }}{{$prefix}}{{ if gt $len (.Var.head_length) }} {{ trunc $front $rest }}…{{ trunc (mul -1 .Var.head_last_char) $rest }}{{ else }}{{ $rest }}{{ end }} ",
-          "foreground": "cyan",
           "mapped_branches": {
             "feat*/*": "𝌚",
             "release/2025-2": "⚙",
             "bug*/*": "🐛",
             "hot*/*": "🔥"
-          }
+          },
+          "background": "p:background",
+          "foreground": "p:git"
         },
         {
           "style": "plain",
           "template": " {{ .Major }}.{{ .Minor }} ",
-          "foreground": "yellow",
-          "type": "python"
+          "type": "python",
+          "background": "p:background",
+          "foreground": "p:python"
         }
       ]
     },
@@ -75,8 +106,9 @@
           },
           "style": "plain",
           "template": " {{ .FormattedMs }}",
-          "foreground": "red",
-          "type": "executiontime"
+          "type": "executiontime",
+          "background": "p:background",
+          "foreground": "p:executiontime"
         },
         {
           "properties": {
@@ -84,14 +116,16 @@
           },
           "style": "plain",
           "template": " {{ .CurrentDate | date .Format }}",
-          "foreground": "lightMagenta",
-          "type": "time"
+          "type": "time",
+          "background": "p:background",
+          "foreground": "p:time"
         },
         {
           "type": "shell",
           "style": "plain",
           "template": " {{ .Name }}",
-          "foreground": "green"
+          "background": "p:background",
+          "foreground": "p:shell"
         }
       ]
     },
@@ -102,8 +136,9 @@
         {
           "style": "plain",
           "template": "{{ if .Root }}{{else}}{{end}}<b><lightRed>{{ .UserName }}</>></b>",
-          "foreground": "default",
-          "type": "session"
+          "type": "session",
+          "background": "p:background",
+          "foreground": "p:session"
         }
       ],
       "newline": true
