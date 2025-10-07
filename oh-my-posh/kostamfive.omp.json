@@ -9,9 +9,7 @@
     "head_length": 28
   },
   "palette": {
-    "black": "#282C34",
-    "blue": "#61AFEF",
-    "lightBlack": "#282C34",
+    "lightBlack": "#20232a",
     "lightBlue": "#61AFEF",
     "lightCyan": "#56B6C2",
     "lightGreen": "#98C379",
@@ -19,21 +17,24 @@
     "lightRed": "#E06C75",
     "lightWhite": "#DCDFE4",
     "lightYellow": "#E5C07B",
-    "cyan": "#56B6C2",
-    "green": "#98C379",
-    "magenta": "#C678DD",
-    "red": "#E06C75",
+    "black": "#282C34",
+    "blue": "#2490e9",
+    "cyan": "#3b99a5",
+    "green": "#77af4e",
+    "magenta": "#af42cf",
+    "red": "#da515b",
     "white": "#DCDFE4",
-    "yellow": "#E5C07B",
+    "yellow": "#d9a440",
     "background": "transparent",
     "os": "p:lightBlue",
     "path": "p:lightGreen",
-    "git": "p:cyan",
+    "git": "p:lightCyan",
     "python": "p:yellow",
-    "executiontime": "p:red",
+    "executiontime": "p:lightRed",
     "time": "p:lightMagenta",
     "shell": "p:green",
-    "session": "p:default"
+    "session": "p:red",
+    "session_sep": "default"
   },
   "blocks": [
     {
@@ -135,7 +136,7 @@
       "segments": [
         {
           "style": "plain",
-          "template": "{{ if .Root }}{{else}}{{end}}<b><lightRed>{{ .UserName }}</>></b>",
+          "template": "{{ if .Root }}{{else}}{{end}}<b>{{ .UserName }}<p:session_sep>></></b>",
           "type": "session",
           "background": "p:background",
           "foreground": "p:session"
