@@ -77,13 +77,7 @@
             "fetch_status": false
           },
           "style": "plain",
-          "template": "{{ $front:=sub (sub .Var.head_length .Var.head_last_char) 1 }}{{ $branch := .HEAD }}{{$prefix := regexFind \"^(.+)/\" $branch}}{{ $rest := trimPrefix $prefix $branch}}{{ $len:= len $rest }}{{$prefix := regexReplaceAll \"release/\" $prefix \"𝌚 /\" }}{{$prefix := regexReplaceAll \"bug.*/\" $prefix \" /\" }}{{$prefix := regexReplaceAll \"hot.*/\" $prefix \"🔥/\" }}{{$prefix}}{{ if gt $len (.Var.head_length) }} {{ trunc $front $rest }}…{{ trunc (mul -1 .Var.head_last_char) $rest }}{{ else }}{{ $rest }}{{ end }} ",
-          "mapped_branches": {
-            "feat*/*": "𝌚",
-            "release/2025-2": "⚙",
-            "bug*/*": "🐛",
-            "hot*/*": "🔥"
-          },
+          "template": "{{ $front:=sub (sub .Var.head_length .Var.head_last_char) 1 }}{{ $branch := .HEAD }}{{$prefix := regexFind \"^(.+)/\" $branch}}{{ $rest := trimPrefix $prefix $branch}}{{ $len:= len $rest }}{{$prefix := regexReplaceAll \"release/\" $prefix \"RL/\" }}{{$prefix := regexReplaceAll \"feat.*/\" $prefix \"FT/\" }}{{$prefix := regexReplaceAll \"bug.*/\" $prefix \"BG/\" }}{{$prefix := regexReplaceAll \"hot.*/\" $prefix \"HT/\" }}{{$prefix}}{{ if gt $len (.Var.head_length) }}{{ trunc $front $rest }}~{{ trunc (mul -1 .Var.head_last_char) $rest }}{{ else }}{{ $rest }}{{ end }} ",
           "background": "p:background",
           "foreground": "p:git"
         },
