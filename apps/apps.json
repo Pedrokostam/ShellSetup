@@ -1,0 +1,39 @@
+{
+  "defaults": {
+    "windows": {
+      "command": "winget $name --accept-package-agreements -e --scope user"
+    },
+    "debian": {
+      "command": "sudo apt-get install $name -y"
+    }
+  },
+  "apps": [
+    {
+      "name": "git",
+      "ubuntu": true,
+      "windows": {
+        "name": "git.git"
+      }
+    },
+    {
+      "name": "micro",
+      "debian": true,
+      "windows": {
+        "name": "zyedidia.micro"
+      }
+    },
+    {
+    	"name":"oh-my-posh",
+    	"windows":{
+    		"name":"JanDeDobbeleer.OhMyPosh"
+    	},
+    	"debian":{
+    		"command":"curl -s https://ohmyposh.dev/install.sh | bash -s"
+    	}
+    },
+    {
+    	"name":"PowerShell",
+    	"windows":{"name": "Microsoft.PowerShell"}
+    }
+  ]
+}
