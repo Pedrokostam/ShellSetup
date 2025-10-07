@@ -4,7 +4,6 @@ Register-EngineEvent -SourceIdentifier 'PowerShell.OnIdle' -MaxTriggerCount 1 -A
   Import-Module -Name Posh -Global
   Import-Module -Name Terminal-Icons -Global
 } | Out-Null
-$env:VIRTUAL_ENV_DISABLE_PROMPT = 1  # Don't show Python venv (posh already does it)
 $env:POSH_GIT_ENABLED = $false
 function Measure-Profile([string]$path = $profile) {ipmo PSProfiler; Write-Host "Measuring $path"; pwsh -NoProfile -Command "measure-Script -Path $path"}
 function touch { [CmdletBinding()] param ([Parameter(Mandatory)][ValidateLength(1, [int]::MaxValue)][Alias('Path')][string]$LiteralPath, [Parameter()][switch]$AccessOnly, [Parameter()][switch]$ModificationOnly ) if (-not (Test-Path $LiteralPath)) { $null = New-Item -ItemType File -Path $LiteralPath }; $item = Get-Item $LiteralPath; if (-not $ModificationOnly.IsPresent) { $item.LastAccessTime = [datetime]::now }; if (-not $AccessOnly.IsPresent) { $item.LastWriteTime = [datetime]::now }; Get-Item $LiteralPath}
