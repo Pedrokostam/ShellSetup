@@ -13,19 +13,32 @@ function Test-IsElevated {
         return $false
     }
 }
+
 $notInstalled = [System.Collections.ArrayList]::new()
-function report($node, [string]$reason) {
+$installed = [System.Collections.ArrayList]::new()
+function report_fail($node, [string]$reason) {
     $null = $notInstalled.Add([PSCustomObject]@{
             Name   = $node.name
             Reason = $reason
         })
 }
-$os = $PSVersionTable.OS
-$availablePlatforms = if ($os -like '*window*') { @('windows') }elseif ($os -like '*ubuntu*') { @('ubuntu', 'debian') }else { @() }
-if (-not $availablePlatforms) {
-    Write-Error "Unrecognized OS $os" -ErrorAction Stop
+function report_success($node) {
+    $null = $installed.Add($node.name)
 }
-$json = Get-Content $PSScriptRoot/apps.json | ConvertFrom-Json -Depth 10
+function fail_if($condition, [string]$errorMsg) {
+    if ($condition) {
+        Write-Error $errorMsg -ErrorAction Stop
+    }
+}
+function fail_soft([string]$msg) {
+    Write-Host $msg -ForegroundColor Red
+}
+$os = $PSVersionTable.OS
+$availablePlatforms = if ($os -like '*window*') { @('windows') }elseif ($os -like '*ubuntu*') { @('ubuntu', 'debian') }elseif ($PSVersionTable.PsVersion.Major -le 5 ) { @('windows') } else { @() }
+#
+fail_if (-not $availablePlatforms) "Unrecognized OS $os"
+#
+$json = Get-Content $PSScriptRoot/apps/apps.json | ConvertFrom-Json 
 $defaultInstallersForSystem = foreach ($system in $availablePlatforms) {
     $conf = $json.defaults."$system"
     if ($conf) {
@@ -34,24 +47,33 @@ $defaultInstallersForSystem = foreach ($system in $availablePlatforms) {
         break
     }
 }
-if (-not $defaultInstallersForSystem) {
-    Write-Error "No defaults for $os" -ErrorAction Stop
-}
+
+#
+fail_if (-not $defaultInstallersForSystem) "No defaults for $os"
+#
 $defaultInstaller = if ($defaultInstallersForSystem.default) { 
     $defaultConf = $defaultInstallersForSystem.default
     $defaultInstallersForSystem.installers | Where-Object name -EQ "$defaultConf" 
 } else {
     $defaultInstallersForSystem.installers[0] 
 }
-
-if (-not $defaultInstaller -or -not $defaultInstaller.command) {
-    Write-Error "No installer for $os" -ErrorAction Stop
-}
+#
+fail_if (-not $defaultInstaller -or -not $defaultInstaller.command)"No installer for $os"
+#
 $apps = $json.apps
+
+$config = [PSCustomObject]@{
+    DefaultInstaller = $defaultInstaller
+    Installers       = $defaultInstallersForSystem
+}
+
+function get-installer([string]$name) {
+    $config.Installers | Where-Object name -EQ $name | Select-Object -First 1
+}
 
 function install ($node) {
     Write-Host "`nProcessing $($node.name)..." -NoNewline
-    $matching = $false 
+    $matching = $null
     foreach ($platform in $availablePlatforms) {
         $val = $node."$platform"
         if ([bool]$val) {
@@ -61,16 +83,17 @@ function install ($node) {
     }
     if (-not $matching) {
         Write-Host 'Skipped (platform)' -ForegroundColor Yellow
-        report $node 'Different platform'
+        report_fail $node 'Different platform'
         return
     }
     $name = if ($matching.name) { $matching.name } else { $node.name }
     $installer = if ($matching.installer) {
-        if ($defaultInstallersForSystem."$($matching.installer)") {
-            $defaultInstallersForSystem."$($matching.installer)"
+        $matchingInstaller = get-installer $matching.installer
+        if ($matchingInstaller) {
+            $matchingInstaller
         } else {
-            Write-Error "Invalid installer for $($node.name) - $($matching.installer)" -ErrorAction Continue
-            report $node 'No installer'
+            fail_soft "Invalid installer for $($node.name) - $($matching.installer)"
+            report_fail $node 'No installer'
             return
         }
     } elseif ($matching.command) {
@@ -79,18 +102,19 @@ function install ($node) {
             elevated = if ($matching.elevated) { $matching.elevated }else { $false }
         }
     } else {
-        $defaultInstaller
+        $config.DefaultInstaller
     }
-    $elevated = if ($matching.elevated -is [bool]) {
+    
+    $elevationRequired = if ($matching.elevated -is [bool]) {
         $matching.elevated
     } else {
         $installer.elevated
     }
 
-    if ($elevated -ne (Test-IsElevated)) {
+    if ($elevationRequired -ne (Test-IsElevated)) {
         Write-Host 'Skipped (elevation)' -ForegroundColor Yellow
-        $msg = if ($elevated) { 'Elevation required' }else { 'Non-elevated user required' }
-        report $node $msg
+        $msg = if ($elevationRequired) { 'Elevation required' } else { 'Non-elevated user required' }
+        report_fail $node $msg
         return
     }
     $cmd = if ($matching.command) { $matching.command }else { $installer.command }
@@ -98,19 +122,40 @@ function install ($node) {
     Write-Host 'Installing' -ForegroundColor Green
     Write-Host 'Executing ' -ForegroundColor Cyan -NoNewline
     Write-Host $cmd -ForegroundColor Magenta
+    $errorOutput = @()
     try {
-        #$cmd | Invoke-Expression -ErrorAction SilentlyContinue
+       $cmd | Invoke-Expression -ErrorAction Continue -ErrorVariable +errorOutput
     } catch {
+        $errorOutput = $_
     }
+    if (-not $errorOutput) {
+        $errorOutput = 'See red line'
+    }
+    # winget return 0 if it succeeds
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Could not install $($node.name)" -ErrorAction Continue
+        fail_soft "Could not install $($node.name)"
+        report_fail $node $errorOutput
+    }else{
+        report_success $node
     }
 }
-
+# ======================================
+# MAIN LOOP
+# ======================================
 foreach ($app in $apps) {
     install($app)
 }
+# ======================================
+# report_success
+# ======================================
+if ($installed) {
+    Write-Host "`nThe following applications were installed:" -ForegroundColor Green
+    $installed
+}
+# ======================================
+# report_fail
+# ======================================
 if ($notInstalled) {
-    Write-Host "`nThe following applications were not installed:"
+    Write-Host "`nThe following applications were NOT installed:" -ForegroundColor red
     $notInstalled | Sort-Object Reason
 }

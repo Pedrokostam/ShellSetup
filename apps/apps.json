@@ -1,12 +1,20 @@
 {
   "defaults": {
     "windows": {
-      "winget": "winget --id $name --accept-package-agreements -e --scope user",
-      "scoop": "scoop install $name",
-      "default": "winget"
+      "default": "winget",
+      "installers": [
+        {
+          "name": "winget",
+          "command": "winget install --id $name --accept-package-agreements -e --scope user -h --source winget",
+          "elevated": false
+        },
+        { "name": "scoop", "command": "scoop install $name", "elevated": false }
+      ]
     },
     "debian": {
-      "apt": "sudo apt install $name -y"
+      "installers": [
+        { "name": "apt", "command": "apt install $name -y", "elevated": true }
+      ]
     }
   },
   "apps": [
@@ -14,24 +22,19 @@
       "name": "git",
       "debian": true,
       "windows": {
-        "name": "git.git"
+        "name": "Git.Git",
+        "elevated": true
       }
     },
     {
-      "name": "notepad++",
+      "name": "Notepad++",
       "debian": false,
       "windows": {
-        "name": "notepad++.notepad++"
+        "name": "Notepad++.Notepad++"
       }
     },
+    
     {
-      "name": "scoop",
-      "windows": {
-        "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
-      },
-      "debian": false
-    },
-     {
       "name": "flatpak",
       "windows": false,
       "debian": true
@@ -54,9 +57,7 @@
     },
     {
       "name": "Firefox",
-      "debian": {
-        "command":"flatpak install flathub org.mozilla.firefox"
-      },
+      "debian": false,
       "windows": {
         "name": "Mozilla.Firefox"
       }
@@ -65,6 +66,14 @@
       "name": "PowerShell",
       "windows": {
         "name": "Microsoft.PowerShell"
+      },
+      "debian": false
+    },
+    {
+      "name": "scoop",
+      "windows": {
+        "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression",
+        "elevated": false
       },
       "debian": false
     }
