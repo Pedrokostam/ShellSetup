@@ -1,3 +1,18 @@
+<#
+.SYNOPSIS
+    Powershell script to install all relevant app specified in ./apps/apps.json.
+.DESCRIPTION
+    Powershell script to install all relevant app specified in ./apps/apps.json.
+.NOTES
+    Information or caveats about the function e.g. 'This function is not supported in Linux'
+.LINK
+    Specify a URI to a help page, this will show when Get-Help -Online is used.
+.EXAMPLE
+    Test-MyTestFunction -Verbose
+    Explanation of the function or its result. You can include multiple examples with additional .EXAMPLE lines
+#>
+[CmdletBinding()]
+param ()
 function Test-IsElevated {
     if ($PSVersionTable.Platform -eq 'Win32NT') {
         # Windows check
