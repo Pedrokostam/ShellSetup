@@ -10,13 +10,14 @@
 	sts = status -s
     co = checkout
     cob = checkout -b
+    cof = "!f() { git fetch origin \"$1\" && git checkout \"$1\"; }; f"
     d = diff
     ds = diff --stat
     dc = diff --cached
     p = push
 	lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)' --all
 	adog = log --all --decorate --oneline --graph
-	a = !git add $@ && git status
+	a = "!f() { git add $@ && git status; }; f"
 	au = !git add -u && git status
 	ignore-locally = update-index --assume-unchanged
 	unignore-locally = update-index --no-assume-unchanged
@@ -24,3 +25,5 @@
 	ba = branch --all
 	bl = branch --list
 	br = branch --remotes
+	alias = "!git config -l | grep alias | cut -c 7-"
+	current-branch = rev-parse --abbrev-ref HEAD
