@@ -26,3 +26,4 @@
 	bl = branch --list
 	br = branch --remotes
 	alias = "!git config -l | grep alias | cut -c 7-"
+	current-branch = rev-parse --abbrev-ref HEAD
