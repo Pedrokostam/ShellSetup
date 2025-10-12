@@ -3,28 +3,31 @@
 # path = <path to this file>
 # # Paths accept the tilde character
 [alias]
+	alias = "!git config -l | grep alias | cut -c 7-"
+	a = "!f() { git add $@ && git status; }; f"
+	au = !git add -u && git status
+    amend = commit --amend --no-edit
 	ci = commit
 	cim = commit -m
-    amend = commit --amend --no-edit
-	st = status
-	sts = status -s
     co = checkout
     cob = checkout -b
     cof = "!f() { git fetch origin \"$1\" && git checkout \"$1\"; }; f"
+	st = status
+	sts = status -s
     d = diff
     ds = diff --stat
     dc = diff --cached
-    p = push
 	lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)' --all
 	adog = log --all --decorate --oneline --graph
-	a = "!f() { git add $@ && git status; }; f"
-	au = !git add -u && git status
 	ignore-locally = update-index --assume-unchanged
 	unignore-locally = update-index --no-assume-unchanged
-	url = config --get remote.origin.url
 	ba = branch --all
 	bl = branch --list
 	br = branch --remotes
-	alias = "!git config -l | grep alias | cut -c 7-"
 	current-branch = rev-parse --abbrev-ref HEAD
 	cb = current-branch
+	find-removed = "!f() { git branch -vv | grep 'gone]' | grep -v '\\s*\\*\\s*' | awk '{print $1}' ;}; f"
+	find-missing = "!g() { git branch -vv | grep -v '\\[origin' | grep -v '\\s*\\*\\s*' | awk '{print $1}' ;}; g"
+	find-non-remote = "!h() { git find-removed;git find-missing;}; h"
+	url = config --get remote.origin.url
+	pullr = pull --rebase
