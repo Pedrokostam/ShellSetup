@@ -35,3 +35,4 @@
 	tool = nvimdiff
 [core]
    editor = "nvim"
+   autocrlf= false
