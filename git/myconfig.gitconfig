@@ -31,3 +31,5 @@
    find-non-remote = "!h() { git find-removed;git find-missing;}; h"
    url = config --get remote.origin.url
    pullr = pull --rebase
+[merge]
+	tool = nvimdiff
