@@ -33,3 +33,5 @@
    pullr = pull --rebase
 [merge]
 	tool = nvimdiff
+[core]
+   editor = "nvim"
