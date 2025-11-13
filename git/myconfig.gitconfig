@@ -34,6 +34,8 @@
 	tool = nvimdiff
 [core]
    editor = "nvim"
-   autocrlf= false
+   autocrlf = false
 [pull]
    rebase = true
+[init]
+   defaultBranch = "main"
