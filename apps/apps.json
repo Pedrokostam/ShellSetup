@@ -77,6 +77,15 @@
         "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
       },
       "debian": false
+    },
+    {
+       "name":"zoxide",
+       "windows": {
+         "name":"ajeetdsouza.zoxide"
+       },
+         "debian":{
+           "command":"curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+         }
     }
   ]
 }
