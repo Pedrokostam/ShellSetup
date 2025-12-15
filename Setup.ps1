@@ -30,7 +30,7 @@ foreach ($mod in $modules) {
 	Install-Module -Name $mod
 }
 $profileCustomPath = Get-Item "$PSScriptRoot/pwsh/Profile_Kostam.ps1" | ForEach-Object fullname
-$line = ". $profileCustomPath"
+$line = ". '$profileCustomPath'"
 if (Test-Path $Profile) {
 	if ((Get-Content $Profile -Raw) -notmatch 'Profile_Kostam\.ps1') {
 		Write-Host "Adding line to user's profile"
