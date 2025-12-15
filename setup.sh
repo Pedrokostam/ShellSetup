@@ -2,7 +2,7 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 if ! command -v git &> /dev/null
 then
-	echo "Git is not installed!!!"
+	echo "Git is not installed! Aliases will no be added"
 else
 	GIT_CONFIG_PATH="$SCRIPT_DIR/git/myconfig.gitconfig"
 	echo "Including file '$GIT_CONFIG_PATH' in the global git configuration... "

@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 $git = Get-Command git
 if (-not $git) {
-	Write-Error 'Git is not installed!!!'
+	Write-Error 'Git is not installed! Aliases will not be added!'
 } else {
 	$gitconfigPath = Get-Item $psscriptroot/git/myconfig.gitconfig | ForEach-Object FullName
 	Write-Host "Including file '$gitconfigPath' in the global git configuration... " -NoNewline -Foreground Green
