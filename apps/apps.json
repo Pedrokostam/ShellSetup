@@ -47,16 +47,6 @@
       }
     },
     {
-      "name": "oh-my-posh",
-      "windows": {
-        "name": "JanDeDobbeleer.OhMyPosh"
-      },
-      "debian": {
-        "command": "curl -s https://ohmyposh.dev/install.sh | bash -s",
-        "elevated": false
-      }
-    },
-    {
       "name": "Firefox",
       "debian": false,
       "windows": {
