@@ -89,7 +89,9 @@
     },
     {
        "name":"fzf",
-       "windows":true,
+       "windows":{
+	 "name":"junegunn.fzf"
+       },
        "debian":true
     }
   ]
