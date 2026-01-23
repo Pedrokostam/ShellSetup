@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 if ! command -v git &> /dev/null
 then
@@ -10,26 +10,26 @@ else
 fi
 
 
-if ! command -v oh-my-posh &> /dev/null
+if command -v oh-my-posh &> /dev/null
 then
-	echo "Installing oh-my-posh"
-	curl -s https://ohmyposh.dev/install.sh | bash -s
-else
 	oh-my-posh upgrade
+else
+	echo "Installing oh-my-posh"
+	curl -sk https://ohmyposh.dev/install.sh | bash -s
 fi
 echo "Installing font..."
 oh-my-posh font install FantasqueSansMono
 
 CUSTOM_RC_FILE_PATH="$SCRIPT_DIR/bash/bashrc_kostam.sh"
 SOURCE_LINE="source \"$CUSTOM_RC_FILE_PATH\""
-if grep -qF "$SOURCE_LINE" "$HOME/.bashrc"
+if grep -qF "$SOURCE_LINE" "$HOME/.profile"
 then
 	echo "Custom profile already added to user's profile"
 else
 	{
 		echo ""
 		echo "$SOURCE_LINE"
-	} >> "$HOME/.bashrc"
+	} >> "$HOME/.profile"
 fi
 
 if command -v pwsh &> /dev/null

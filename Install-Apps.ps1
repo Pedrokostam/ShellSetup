@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Powershell script to install all relevant app specified in ./apps/apps.json.
