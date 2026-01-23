@@ -21,4 +21,32 @@ function touch { [CmdletBinding()] param ([Parameter(Mandatory)][ValidateLength(
 function y { $tmp = [System.IO.Path]::GetTempFileName(); yazi $args --cwd-file="$tmp"; $cwd = Get-Content -Path $tmp -Encoding UTF8; if (-not [String]::IsNullOrEmpty($cwd) -and $cwd -ne $PWD.Path) { Set-Location -LiteralPath ([System.IO.Path]::GetFullPath($cwd)) }; Remove-Item -Path $tmp }
 function qq { if ($env:YAZI_LEVEL) { exit } else { Write-Error 'No Yazi instance detected' } }
 function Get-PoshUpdates { Push-Location $profile/..; git pull; oh-my-posh upgrade; Pop-Location }
+function Watch-Command {
+   [CmdletBinding()]
+   param(
+      [Parameter(Mandatory)]
+      [string]
+      $command,
+      [Parameter()]
+      [double]
+      $period = 1.0
+   )
+   while ($true)
+   {
+      $output = "";
+      Invoke-Expression $command *>&1  | Tee-Object -Variable output
+      $sum = 0;
+      foreach ($a in $output)
+      {
+         $sum += $a.ToString().split("`n").Length;
+      }
+      $currVert = [System.Console]::CursorTop;
+      $newPos = $currVert - $sum
+      if($newPos -ge 0){
+         [System.Console]::SetCursorPosition(0,$currVert-$sum)
+      }
+      Start-Sleep -Seconds $period
+   }
+}
+New-Alias -Name watch -Value Watch-Command
 #Invoke-Expression (& { (zoxide init powershell | Out-String) }) -EA SilentlyContinue
