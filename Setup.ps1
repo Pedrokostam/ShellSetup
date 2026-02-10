@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+#!/usr/bin/env -S pwsh -NoProfile
 $git = Get-Command git
 if (-not $git) {
 	Write-Error 'Git is not installed! Aliases will not be added!'
