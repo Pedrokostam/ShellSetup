@@ -26,11 +26,12 @@ function Watch-Command {
    param(
       [Parameter(Mandatory)]
       [string]
-      $command,
-      [Parameter()]
+      $Command,
+      [Parameter(HelpMessage="How long to wait before calling the command again, in seconds.")]
       [double]
-      $period = 1.0
+      $Period = 1.0
    )
+   $startTime = Get-Date
    while ($true)
    {
       $output = "";
@@ -40,6 +41,9 @@ function Watch-Command {
       {
          $sum += $a.ToString().split("`n").Length;
       }
+      $ts = [int]((get-date) - $startTime).TotalSeconds
+      Write-Host "`nWatched for $ts seconds" -ForegroundColor Cyan
+      $sum=$sum+2;
       $currVert = [System.Console]::CursorTop;
       $newPos = $currVert - $sum
       if($newPos -ge 0){
@@ -48,5 +52,5 @@ function Watch-Command {
       Start-Sleep -Seconds $period
    }
 }
-New-Alias -Name watch -Value Watch-Command
+New-Alias -Name watch -Value Watch-Command -ErrorAction SilentlyContinue
 #Invoke-Expression (& { (zoxide init powershell | Out-String) }) -EA SilentlyContinue
