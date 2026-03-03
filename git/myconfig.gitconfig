@@ -17,7 +17,9 @@
    d = diff
    ds = diff --stat
    dc = diff --cached
-   lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)' --all
+   lg = log --graph --abbrev-commit --decorate --date=format:'%d %b %H:%M %a' --format=format:'%C(bold blue)%h%Creset - %C(bold green)(%ad)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)'
+   lga = lg --all
+   lgd = lg --first-parent
    adog = log --all --decorate --oneline --graph
    ignore-locally = update-index --assume-unchanged
    unignore-locally = update-index --no-assume-unchanged
