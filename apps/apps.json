@@ -16,12 +16,41 @@
       "installers": [
         { "name": "apt", "command": "apt install $name -y", "elevated": true }
       ]
+    },
+    "arch": {
+       "default": "pacman",
+       "installers": [
+          {"name": "pacman", "command": "pacman -Syq --noconfirm $name", "elevated": true},
+          {"name": "yay", "command": "yay -Syq --noconfirm $name", "elevated": false}
+       ]
     }
   },
   "apps": [
     {
+      "name": "scoop",
+      "windows": {
+        "elevated": false,
+        "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
+      },
+      "debian": false,
+      "arch": false
+    },
+    {
+      "name": "flatpak",
+      "windows": false,
+      "arch": false,
+      "debian": true
+    },
+    {
+      "name": "fastfetch",
+      "windows": true,
+      "arch": true,
+      "debian": true
+    },
+    {
       "name": "git",
       "debian": true,
+      "arch": true,
       "windows": {
         "name": "Git.Git",
         "elevated": true
@@ -30,13 +59,27 @@
     {
       "name": "Notepad++",
       "debian": false,
+      "arch": false,
       "windows": {
         "name": "Notepad++.Notepad++"
       }
     },
     {
-      "name": "flatpak",
-      "windows": false,
+      "name": "jq",
+      "windows": {
+         "name": "jqlang.jq"
+      },
+      "arch": {
+         "name": "extra/jq"
+      },
+      "debian": true
+    },
+    {
+      "name": "ripgrep",
+      "windows": {
+         "installer": "scoop"
+      },
+      "arch": true,
       "debian": true
     },
     {
@@ -44,37 +87,41 @@
       "debian": true,
       "windows": {
         "name": "zyedidia.micro"
-      }
-    },
-    {
-      "name": "scoop",
-      "windows": {
-        "elevated": false,
-        "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
       },
-      "debian": false
+      "arch":{
+        "name": "extra/micro"
+      }
     },
     {
        "name":"zoxide",
        "windows": {
          "name":"ajeetdsouza.zoxide"
        },
-         "debian":{
-           "command":"curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-         }
+       "debian":{
+         "command":"curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+       },
+       "arch":{
+         "command":"curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+       }
     },
     {
        "name":"fzf",
        "windows":{
-	 "name":"junegunn.fzf"
+      	 "name":"junegunn.fzf"
        },
-       "debian":true
+       "debian":true,
+       "arch":{
+         "name": "extra/fzf"
+       }
     },
     {
       "name": "Firefox",
       "debian": false,
       "windows": {
         "name": "Mozilla.Firefox"
+      },
+      "arch":{
+         "name": "extra/firefox"
       }
     },
     {
@@ -82,7 +129,8 @@
       "windows": {
         "name": "Microsoft.PowerShell"
       },
-      "debian": false
+      "debian": false,
+      "arch": false
     }
   ]
 }
