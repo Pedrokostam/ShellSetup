@@ -1,4 +1,8 @@
 #!/usr/bin/env -S pwsh -NoProfile
+
+################################
+####### set up git
+################################
 $git = Get-Command git
 if (-not $git)
 {
@@ -10,6 +14,9 @@ if (-not $git)
    git config --global include.path $gitconfigPath
    Write-Host 'DONE' -Foreground Green
 }
+################################
+####### set up oh-my-posh
+################################
 $omp = Get-Command oh-my-posh -ea SilentlyContinue
 if (-not $omp)
 {
@@ -26,8 +33,9 @@ if (-not $omp)
    Write-Host 'Upgrading oh-my-posh...' -Foreground Green
    oh-my-posh upgrade
 }
-Write-Host 'Installing font...' -Foreground Green
-
+################################
+####### install font
+################################
 $font = 'FantasqueSansMono'
 $isFontInstalled = if ($PSVersionTable.platform -like '*nix*')
 {
@@ -38,13 +46,24 @@ $isFontInstalled = if ($PSVersionTable.platform -like '*nix*')
 }
 if(-not $isFontInstalled)
 {
+   Write-Host 'Installing font...' -Foreground Green
    oh-my-posh font install $font
 }
+else
+{
+   Write-Host "Font is already installed"
+}
+################################
+####### trust PSGallery
+################################
 if (-not (Get-PSRepository -name PSGallery).InstalltionPolicy -eq 'Trusted')
 {
    Write-Host 'Trusting PSGallery...' -Foreground Green
    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 }
+################################
+####### Install pwsh modules
+################################
 $modules = @('Terminal-Icons', 'Posh', 'PSProfiler', "Microsoft.WinGet.Client")
 foreach ($mod in $modules)
 {
@@ -54,6 +73,9 @@ foreach ($mod in $modules)
       Install-Module -Name $mod
    }
 }
+################################
+####### Update pwsh profile
+################################
 $profileCustomPath = Get-Item "$PSScriptRoot/pwsh/Profile_Kostam.ps1" | ForEach-Object fullname
 $line = ". '$profileCustomPath'"
 if (Test-Path $Profile)
@@ -72,9 +94,10 @@ if (Test-Path $Profile)
    New-Item -Path (Split-Path $profile) -ItemType Directory -Force
    $line > $Profile
 }
-
+################################
+####### install apps
+################################
 $inst = Read-Host "Do you want to proceed with app installation? [Y/n]"
-
 if ($inst.Length -eq 0 -or $inst -match '^y.*')
 {
    . $PSScriptRoot/Install-Apps.ps1

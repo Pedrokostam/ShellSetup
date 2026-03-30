@@ -15,6 +15,18 @@
 [CmdletBinding()]
 param ()
 
+################################
+####### global vars
+################################
+$alreadyInstalled = [System.Collections.ArrayList]::new()
+$notInstalled = [System.Collections.ArrayList]::new()
+$installed = [System.Collections.ArrayList]::new()
+$elevationError = 'Elevation required'
+$availablePlatforms=@()
+
+################################
+####### global functions
+################################
 function Test-IsElevated
 {
    if ($PSVersionTable.Platform -eq 'Win32NT')
@@ -35,9 +47,7 @@ function Test-IsElevated
    }
 }
 
-$notInstalled = [System.Collections.ArrayList]::new()
-$installed = [System.Collections.ArrayList]::new()
-$elevationError = 'Elevation required'
+# adds node to notinstalled
 function report_fail($node, [string]$reason)
 {
    $null = $notInstalled.Add([PSCustomObject]@{
@@ -45,10 +55,14 @@ function report_fail($node, [string]$reason)
          Reason = $reason
       })
 }
+
+# adds node to installed
 function report_success($node)
 {
    $null = $installed.Add($node.name)
 }
+
+# writes closing error if condition is TRUE
 function fail_if($condition, [string]$errorMsg)
 {
    if ($condition)
@@ -56,13 +70,23 @@ function fail_if($condition, [string]$errorMsg)
       Write-Error $errorMsg -ErrorAction Stop
    }
 }
+
+# writes red message, but continues
 function fail_soft([string]$msg)
 {
    Write-Host $msg -ForegroundColor Red
 }
+
+# appends app list to alreadyInstalled
+function add_installed($items)
+{
+   $null = $alreadyInstalled.AddRange($items)
+}
+
+################################
+####### establish platform
+################################
 $os = $PSVersionTable.OS
-$availablePlatforms=@()
-$alreadyInstalled = [System.Collections.ArrayList]::new()
 if ($PSVersionTable.PSVersion.Major -le 5 -or  $PSVersionTable.OS -like '*window*')
 {
    $availablePlatforms = @('windows')
@@ -72,7 +96,7 @@ if ($PSVersionTable.PSVersion.Major -le 5 -or  $PSVersionTable.OS -like '*window
    $scoopInstalled = Get-Command scoop -ea SilentlyContinue
    if ($scoopInstalled)
    {
-      $null = $alreadyInstalled.AddRange((scoop list | ForEach-Object name))
+      add_installed (scoop list | ForEach-Object name)
    }
 } elseif ($PSVersionTable.Platform -like '*unix*')
 {
@@ -81,21 +105,24 @@ if ($PSVersionTable.PSVersion.Major -le 5 -or  $PSVersionTable.OS -like '*window
    if ($idlike -like '*ubuntu*' -or $idlike -like '*debian*')
    {
       $availablePlatforms = @('ubuntu', 'debian')   
-      $null = $alreadyInstalled.AddRange((dpkg-query -f '${binary:Package}\n' -W))
+      add_installed (dpkg-query -f '${binary:Package}\n' -W)
    } elseif ($idlike -like '*arch*')
    {
       $availablePlatforms = @('arch')
-      $null = $alreadyInstalled.AddRange((pacman -Qq))
+      add_installed (pacman -Qq)
    } else
    {
       fail_if $true "Unrecognized Linux OS"
    }
 }
 $alreadyInstalled = $alreadyInstalled | Select-Object -Unique
-
-fail_if (-not $availablePlatforms) "Unrecognized OS $($PSVersionTable.Platform) - $($PSVersionTable.OS)"
-
 #
+fail_if (-not $availablePlatforms) "Unrecognized OS $($PSVersionTable.Platform) - $($PSVersionTable.OS)"
+#
+
+################################
+####### get apps to install
+################################
 $json = Get-Content $PSScriptRoot/apps/apps.json | ConvertFrom-Json 
 $defaultInstallersForSystem = foreach ($system in $availablePlatforms)
 {
@@ -111,6 +138,7 @@ $defaultInstallersForSystem = foreach ($system in $availablePlatforms)
 #
 fail_if (-not $defaultInstallersForSystem) "No defaults for $os"
 #
+
 $defaultInstaller = if ($defaultInstallersForSystem.default)
 { 
    $defaultConf = $defaultInstallersForSystem.default
@@ -122,8 +150,10 @@ $defaultInstaller = if ($defaultInstallersForSystem.default)
 #
 fail_if (-not $defaultInstaller -or -not $defaultInstaller.command)"No installer for $os"
 #
+
 $apps = $json.apps
 
+### available installers for the current platform
 $config = [PSCustomObject]@{
    DefaultInstaller = $defaultInstaller
    Installers       = $defaultInstallersForSystem
@@ -137,47 +167,64 @@ function get-installer([string]$name)
 function install ($node)
 {
    Write-Host "`nProcessing $($node.name)..." -NoNewline
-   $matching = $null
+   ### installation instruction for the given platform
+   $installRequest = $null
    foreach ($platform in $availablePlatforms)
    {
       $val = $node."$platform"
       if ([bool]$val)
       {
-         $matching = $val
+         $installRequest = $val
          break
       }
    }
-   if (-not $matching)
+   if (-not $installRequest)
    {
       Write-Host 'Skipped (platform)' -ForegroundColor Yellow
       report_fail $node 'Different platform'
       return
    }
-   $name = if ($matching.name)
-   { $matching.name 
+   ### names is either the general name or the custom name from the request
+   $name = if ($installRequest.name)
+   { 
+      $installRequest.name 
    } else
-   { $node.name 
-   }
-   $installer = if ($matching.installer)
    {
-      $matchingInstaller = get-installer $matching.installer
-      if ($matchingInstaller)
+      $node.name 
+   }
+
+   ### Check if the app is already installed
+   $isAlreadyInstalled =[bool]($alreadyInstalled | Where-Object { $name -ilike "*$_*" -or $_ -ilike "*$name*"})
+   if ($isAlreadyInstalled)
+   {
+      Write-Host 'Already installed' -ForegroundColor Yellow
+      report_fail $node 'Already installed'
+      return
+   }
+    
+   ### Installer is either custom, a command, or default
+   $installer = if ($installRequest.installer)
+   {
+      $installRequestInstaller = get-installer $matching.installer
+      if ($installRequestInstaller)
       {
-         $matchingInstaller
+         $installRequestInstaller
       } else
       {
-         fail_soft "Invalid installer for $($node.name) - $($matching.installer)"
+         fail_soft "Invalid installer for $($node.name) - $($installRequest.installer)"
          report_fail $node 'No installer'
          return
       }
-   } elseif ($matching.command)
+   } elseif ($installRequest.command)
    {
       [PSCustomObject]@{
-         command  = $matching.command
-         elevated = if ($matching.elevated)
-         { $matching.elevated 
+         command  = $installRequest.command
+         elevated = if ($installRequest.elevated)
+         {
+            $installRequest.elevated 
          } else
-         { $false 
+         { 
+            $false 
          }
       }
    } else
@@ -185,16 +232,9 @@ function install ($node)
       $config.DefaultInstaller
    }
 
-   $isAlreadyInstalled =[bool]($alreadyInstalled | Where-Object { $name -ilike "*$_*" -or $_ -ilike "*$name*"})
-   if ($isAlreadyInstalled){
-      Write-Host 'Already installed' -ForegroundColor Yellow
-      report_fail $node 'Already installed'
-      return
-   }
-    
-   $elevationRequired = if ($matching.elevated -is [bool])
+   $elevationRequired = if ($installRequest.elevated -is [bool])
    {
-      $matching.elevated
+      $installRequest.elevated
    } else
    {
       $installer.elevated
@@ -204,19 +244,26 @@ function install ($node)
    {
       Write-Host 'Skipped (elevation)' -ForegroundColor Yellow
       $msg = if ($elevationRequired)
-      { $elevationError 
+      {
+         $elevationError 
       } else
-      { 'Non-elevated user required' 
+      { 
+         'Non-elevated user required' 
       }
       report_fail $node $msg
       return
    }
-   $cmd = if ($matching.command)
-   { $matching.command 
+
+   $cmd = if ($installRequest.command)
+   {
+      $installRequest.command 
    } else
-   { $installer.command 
+   {
+      $installer.command 
    }
+
    $cmd = $cmd -replace '\$name', $name
+
    Write-Host 'Installing' -ForegroundColor Green
    Write-Host 'Executing ' -ForegroundColor Cyan -NoNewline
    Write-Host $cmd -ForegroundColor Magenta
@@ -242,32 +289,36 @@ function install ($node)
       report_success $node
    }
 }
-# ======================================
-# MAIN LOOP
-# ======================================
+
+################################
+####### MAIN LOOP
+################################
 foreach ($app in $apps)
 {
    install($app)
 }
-# ======================================
-# report_success
-# ======================================
+
+################################
+####### report success
+################################
 if ($installed)
 {
    Write-Host "`nThe following applications were installed:" -ForegroundColor Green
    $installed
 }
-# ======================================
-# report_fail
-# ======================================
+
+################################
+####### report failed
+################################
 if ($notInstalled)
 {
    Write-Host "`nThe following applications were NOT installed during this script:" -ForegroundColor red
    $notInstalled | Sort-Object Reason
 }
-# ======================================
-# file report
-# ======================================
+
+################################
+####### file report
+################################
 @{
    installed=$installed
    not_installed=$notInstalled
