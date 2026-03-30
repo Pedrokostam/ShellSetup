@@ -71,19 +71,6 @@ else
 	curl -sk https://ohmyposh.dev/install.sh | bash -s
 fi
 
-$FONT_NAME="FantasqueSansMono"
-if ! fc-list :family | grep -i "$FONT_NAME"
-then
-   echo "Installing font..."
-   if command -v oh-my-posh &> /dev/null
-   then
-      oh-my-posh font install $FONT_NAME
-   else
-      echo "Oh-My-Posh is not in PATH! Add ~/.local/bin to PATH"
-   fi
-fi
-
-
 CUSTOM_RC_FILE_PATH="$SCRIPT_DIR/bash/bashrc_kostam.sh"
 SOURCE_LINE="source \"$CUSTOM_RC_FILE_PATH\""
 add_to_file "$SOURCE_LINE" "$HOME/.bashrc"

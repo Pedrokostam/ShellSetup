@@ -17,7 +17,7 @@
           "properties": {
             "default": {
               "$ref": "#/$refs/ident",
-              "description": "Default installer for the platform. If not specified, the first installers will be used."
+              "description": "Default installer for the platform. If not specified, the first installer will be used."
             },
             "installers": {
               "items": {
@@ -67,7 +67,7 @@
         "additionalProperties": false,
         "minProperties": 2,
         "patternProperties": {
-          "^(windows|debian|ubuntu)$": {
+          "^(windows|debian|ubuntu|arch)$": {
             "oneOf": [
               {
                 "type": "object",

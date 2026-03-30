@@ -1,136 +1,154 @@
 {
-  "$schema": "./schema.json",
-  "defaults": {
-    "windows": {
-      "default": "winget",
-      "installers": [
-        {
-          "name": "winget",
-          "command": "winget install --id $name --accept-package-agreements -e --scope user -h --source winget",
-          "elevated": false
-        },
-        { "name": "scoop", "command": "scoop install $name", "elevated": false }
-      ]
-    },
-    "debian": {
-      "installers": [
-        { "name": "apt", "command": "apt install $name -y", "elevated": true }
-      ]
-    },
-    "arch": {
-       "default": "pacman",
-       "installers": [
-          {"name": "pacman", "command": "pacman -Syq --noconfirm $name", "elevated": true},
-          {"name": "yay", "command": "yay -Syq --noconfirm $name", "elevated": false}
-       ]
-    }
-  },
-  "apps": [
-    {
-      "name": "scoop",
+   "$schema": "./schema.json",
+   "defaults": {
       "windows": {
-        "elevated": false,
-        "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
+         "default": "winget",
+         "installers": [
+            {
+               "name": "winget",
+               "command": "winget install --id $name --accept-package-agreements -e --scope user -h --source winget",
+               "elevated": false
+            },
+            {
+               "name": "scoop",
+               "command": "scoop install $name",
+               "elevated": false
+            }
+         ]
       },
-      "debian": false,
-      "arch": false
-    },
-    {
-      "name": "flatpak",
-      "windows": false,
-      "arch": false,
-      "debian": true
-    },
-    {
-      "name": "fastfetch",
-      "windows": true,
-      "arch": true,
-      "debian": true
-    },
-    {
-      "name": "git",
-      "debian": true,
-      "arch": true,
-      "windows": {
-        "name": "Git.Git",
-        "elevated": true
-      }
-    },
-    {
-      "name": "Notepad++",
-      "debian": false,
-      "arch": false,
-      "windows": {
-        "name": "Notepad++.Notepad++"
-      }
-    },
-    {
-      "name": "jq",
-      "windows": {
-         "name": "jqlang.jq"
+      "debian": {
+         "installers": [
+            {
+               "name": "apt",
+               "command": "apt install $name -y",
+               "elevated": true
+            }
+         ]
       },
       "arch": {
-         "name": "extra/jq"
-      },
-      "debian": true
-    },
-    {
-      "name": "ripgrep",
-      "windows": {
-         "installer": "scoop"
-      },
-      "arch": true,
-      "debian": true
-    },
-    {
-      "name": "micro",
-      "debian": true,
-      "windows": {
-        "name": "zyedidia.micro"
-      },
-      "arch":{
-        "name": "extra/micro"
+         "default": "pacman",
+         "installers": [
+            {
+               "name": "pacman",
+               "command": "pacman -Syq --noconfirm $name",
+               "elevated": true
+            },
+            {
+               "name": "yay",
+               "command": "yay -Syq --noconfirm $name",
+               "elevated": false
+            }
+         ]
       }
-    },
-    {
-       "name":"zoxide",
-       "windows": {
-         "name":"ajeetdsouza.zoxide"
-       },
-       "debian":{
-         "command":"curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-       },
-       "arch":{
-         "command":"curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-       }
-    },
-    {
-       "name":"fzf",
-       "windows":{
-      	 "name":"junegunn.fzf"
-       },
-       "debian":true,
-       "arch":{
-         "name": "extra/fzf"
-       }
-    },
-    {
-      "name": "Firefox",
-      "debian": false,
-      "windows": {
-        "name": "Mozilla.Firefox"
+   },
+   "apps": [
+      {
+         "name": "scoop",
+         "windows": {
+            "elevated": false,
+            "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
+         },
+         "debian": false,
+         "arch": false
       },
-      "arch":{
-         "name": "extra/firefox"
+      {
+         "name": "flatpak",
+         "windows": false,
+         "arch": false,
+         "debian": true
+      },
+      {
+         "name": "fastfetch",
+         "windows": true,
+         "arch": true,
+         "debian": true
+      },
+      {
+         "name": "git",
+         "debian": true,
+         "arch": true,
+         "windows": {
+            "name": "Git.Git",
+            "elevated": true
+         }
+      },
+      {
+         "name": "Notepad++",
+         "debian": false,
+         "arch": false,
+         "windows": {
+            "name": "Notepad++.Notepad++"
+         }
+      },
+      {
+         "name": "jq",
+         "windows": {
+            "name": "jqlang.jq"
+         },
+         "arch": {
+            "name": "extra/jq"
+         },
+         "debian": true
+      },
+      {
+         "name": "ripgrep",
+         "windows": {
+            "installer": "scoop"
+         },
+         "arch": true,
+         "debian": true
+      },
+      {
+         "name": "micro",
+         "debian": true,
+         "windows": {
+            "name": "zyedidia.micro"
+         },
+         "arch": {
+            "name": "extra/micro"
+         }
+      },
+      {
+         "name": "zoxide",
+         "windows": {
+            "name": "ajeetdsouza.zoxide"
+         },
+         "debian": {
+            "elevated": false,
+            "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+         },
+         "arch": {
+            "elevated": false,
+            "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+         }
+      },
+      {
+         "name": "fzf",
+         "windows": {
+            "name": "junegunn.fzf"
+         },
+         "debian": true,
+         "arch": {
+            "name": "extra/fzf"
+         }
+      },
+      {
+         "name": "Firefox",
+         "debian": false,
+         "windows": {
+            "name": "Mozilla.Firefox"
+         },
+         "arch": {
+            "name": "extra/firefox"
+         }
+      },
+      {
+         "name": "PowerShell",
+         "windows": {
+            "name": "Microsoft.PowerShell"
+         },
+         "debian": false,
+         "arch": false
       }
-    },
-    {
-      "name": "PowerShell",
-      "windows": {
-        "name": "Microsoft.PowerShell"
-      },
-      "debian": false,
-      "arch": false
-    }
-  ]
+   ]
 }

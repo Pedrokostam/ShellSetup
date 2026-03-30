@@ -264,7 +264,6 @@ function install ($node)
 
    $cmd = $cmd -replace '\$name', $name
 
-   Write-Host 'Installing' -ForegroundColor Green
    Write-Host 'Executing ' -ForegroundColor Cyan -NoNewline
    Write-Host $cmd -ForegroundColor Magenta
    $errorOutput = @()
