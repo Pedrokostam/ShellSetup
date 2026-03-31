@@ -1,31 +1,44 @@
 #!/usr/bin/env bash
 
 FORCE=false
+CONFIRM=true
 for arg in "$@"; do
     if [ "$arg" == "-f" ]; then
         FORCE=true
+        break
+    fi
+    if [ "$arg" == "-y" ]; then
+        CONFIRM=true
         break
     fi
 done
 
 if [ "$(id -u)" -eq 0 ]; then
     if [ "$FORCE" = true ]; then
-        echo "Warning: Running as root, but -f was specified. Proceeding..."
+        echo -e "\e[33mWarning: Running as root, but -f was specified. Proceeding...\e[0m"
     else
-        echo "Error: This script cannot be run as root. Use -f to override."
+        echo "Error: This script cannot be run as root. Use -f to override." >&2
         exit 1
     fi
 fi
 
+print_checkpoint(){
+    local MSG=$1
+    echo -e "\e[36m##################"
+    echo          "###   $MSG"
+    echo -e "##################\e[0m"
+}
+
 add_to_path() {
    local DIR=$1
+   local PROFILE="$HOME/.profile"
    if echo "$PATH" | grep -qE "(^|:)${DIR}(:|$)"; then
        echo "$DIR is already in PATH"
    else
-       echo "" > "$HOME/.profile"
-       echo "export PATH=\"\$PATH:$DIR" >> "$HOME/.profile"
-       export PATH="$PATH:$DIR"
-       echo "Added $DIR to PATH"
+       echo "" > "$PROFILE"
+       echo "export PATH=\"\$PATH:$DIR\"" >> "$PROFILE"
+       source "$PROFILE"
+       print_checkpoint "Added $DIR to PATH"
    fi
 }
 
@@ -39,7 +52,7 @@ add_to_file() {
     fi
 
     if grep -qF "$SOURCE_LINE" "$FILE_PATH" 2>/dev/null; then
-        echo "$SOURCE_LINE already added to $FILE_PATHG"
+        print_checkpoint "Line $SOURCE_LINE already added to $FILE_PATH"
     else
         {
             echo ""
@@ -67,7 +80,7 @@ if command -v oh-my-posh &> /dev/null
 then
 	oh-my-posh upgrade
 else
-	echo "Installing oh-my-posh"
+	print_checkpoint "Installing oh-my-posh"
 	curl -sk https://ohmyposh.dev/install.sh | bash -s
 fi
 
@@ -80,7 +93,7 @@ SOURCE_LINE="source \"$CUSTOM_RC_FILE_PATH\""
 add_to_file "$SOURCE_LINE" "$HOME/.profile"
 
 if ! command -v pwsh &> /dev/null
-then 
+then
    if command -v yay &> /dev/null
    then
       PKG_MGR="yay"
@@ -93,16 +106,27 @@ then
 
    if [[ -n "$PKG_MGR" ]]
    then
-      read -p "Install PowerShell using $PKG_MGR? (y/n): " confirm
-      if [[ $confirm == [yY] ]]; then
-         eval "$INSTALL_CMD"
-      fi
+        if [[ $CONFIRM = true ]]
+        then
+            eval "$INSTALL_CMD"
+        else
+            read -p "Install PowerShell using $PKG_MGR? (y/n): " confirm
+            if [[ $confirm == [yY] ]]; then
+                eval "$INSTALL_CMD"
+            fi
+        fi
    fi
 fi
 
-echo "Basic installation for linux shell completed. The rest requires Pwsh."
+
+print_checkpoint "Basic installation for linux shell completed. The rest requires Pwsh."
 
 if command -v pwsh &> /dev/null
 then
-	pwsh -noprofile "$SCRIPT_DIR/Setup.ps1"
+    if [ "$CONFIRM" = true ]
+    then
+       	pwsh -noprofile "$SCRIPT_DIR/Setup.ps1" -y
+    else
+       	pwsh -noprofile "$SCRIPT_DIR/Setup.ps1"
+    fi
 fi

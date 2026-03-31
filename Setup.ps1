@@ -1,4 +1,25 @@
 #!/usr/bin/env -S pwsh -NoProfile
+[CmdletBinding()]
+param (
+   [Parameter()]
+   [Switch]
+   [Alias("Yes")]
+   $Confirm,
+   [Parameter()]
+   [Switch]
+   $NoModuleInstallation
+)
+
+function read_or_skip($skip, $prompt)
+{
+   if($skip)
+   {
+      $true
+   } else
+   {
+      Read-Host $prompt
+   }
+}
 
 ################################
 ####### set up git
@@ -37,26 +58,36 @@ if (-not $omp)
 ####### install font
 ################################
 $font = 'FantasqueSansMono'
+$searchFont = 'FantasqueSans'
 $isFontInstalled = if ($PSVersionTable.platform -like '*nix*')
 {
-   fc-list | grep $font -i
+   fc-list | grep $searchFont -i
 } else
 {
-   (New-Object System.Drawing.Text.InstalledFontCollection).Families | Where-Object { $_.Name -ilike "*$font*" }
+   (New-Object System.Drawing.Text.InstalledFontCollection).Families | Where-Object { $_.Name -ilike "*$searchFont*" }
 }
 if(-not $isFontInstalled)
 {
    Write-Host 'Installing font...' -Foreground Green
    oh-my-posh font install $font
-}
-else
+} else
 {
    Write-Host "Font is already installed"
 }
+
+$isUnixAndRoot = if ($PSVersionTable.Platform -like '*nix*')
+{
+   ( id -u ) -eq 0
+} else
+{
+   $false
+}
+
+
 ################################
 ####### trust PSGallery
 ################################
-if (-not (Get-PSRepository -name PSGallery).InstalltionPolicy -eq 'Trusted')
+if (-not (Get-PSRepository -name PSGallery).InstallationPolicy -eq 'Trusted')
 {
    Write-Host 'Trusting PSGallery...' -Foreground Green
    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
@@ -64,13 +95,19 @@ if (-not (Get-PSRepository -name PSGallery).InstalltionPolicy -eq 'Trusted')
 ################################
 ####### Install pwsh modules
 ################################
-$modules = @('Terminal-Icons', 'Posh', 'PSProfiler', "Microsoft.WinGet.Client")
+$modules = @('Terminal-Icons', 'Posh', 'PSProfiler', 'WriteProgressPlus')
+$availableModules = Get-Module -ListAvailable | Select-Object -ExpandProperty Name
 foreach ($mod in $modules)
 {
-   if(-not (Get-Module -Name $mod))
+   if($availableModules -notcontains $mod)
    {
+      $scope = 'CurrentUser'
+      if ($isUnixAndRoot)
+      {
+         $scope = 'AllUsers'
+      }
       Write-Host "Installing $mod..." -Foreground Green
-      Install-Module -Name $mod
+      Install-Module -Name $mod -AcceptLicense -Scope $scope
    }
 }
 ################################
@@ -97,8 +134,8 @@ if (Test-Path $Profile)
 ################################
 ####### install apps
 ################################
-$inst = Read-Host "Do you want to proceed with app installation? [Y/n]"
-if ($inst.Length -eq 0 -or $inst -match '^y.*')
+$inst =  read_or_skip $Confirm.IsPresent "Do you want to proceed with app installation? [Y/n]"
+if ($inst -eq $true -or $inst.Length -eq 0 -or $inst -match '^y.*')
 {
    . $PSScriptRoot/Install-Apps.ps1
    $output = Get-Content "$PSScriptRoot/install_report.json" | ConvertFrom-Json
@@ -106,10 +143,10 @@ if ($inst.Length -eq 0 -or $inst -match '^y.*')
    $finishedNotInstalled = $output.not_installed
    if ($output.redo_with_elevation)
    {
-      $inst =  Read-Host "Some app require elevation to install. Attempt sudo? [Y/n]"
-      if ($inst.Length -eq 0 -or $inst -match '^y.*')
+      $inst = read_or_skip $Confirm.IsPresent "Some app require elevation to install. Attempt sudo? [Y/n]"
+      if ($inst -eq $true -or $inst.Length -eq 0 -or $inst -match '^y.*')
       {
-         sudo pwsh -noprofile $PSScriptRoot/Install-Apps.ps1
+         sudo -E pwsh -noprofile $PSScriptRoot/Install-Apps.ps1
          $elevatedOutput = Get-Content "$PSScriptRoot/install_report.json" | ConvertFrom-Json
          $finishedInstalled += $elevatedOutput.installed
          $finishedNotInstalled = $finishedInstalled | Where-Object {$_.Name -inotin $elevatedOutput.installed}

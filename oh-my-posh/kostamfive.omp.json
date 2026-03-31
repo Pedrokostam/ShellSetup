@@ -43,8 +43,7 @@
       "segments": [
         {
           "type": "os",
-          "properties": {
-          },
+          "options": {},
           "style": "powerline",
           "template": "{{ .Icon }} {{ .HostName }}{{ if .WSL }} (WSL){{ end }} ",
           "background": "p:background",
@@ -52,7 +51,7 @@
         },
         {
           "type": "path",
-          "properties": {
+          "options": {
             "folder_icon": "...",
             "folder_separator_icon": "<darkGray>/</>",
             "mapped_locations": {
@@ -70,13 +69,11 @@
         },
         {
           "type": "git",
-          "properties": {
-            "branch_max_length": 100,
-            "fetch_stash_count": false,
+          "options": {
             "fetch_status": false
           },
           "style": "plain",
-          "template":"{{ $prefix := regexFind \"^.*?/\" .HEAD}}{{ $suffix := trimPrefix $prefix .HEAD}}{{ $prefix := replace \"/\" \"<d>/</d>\" $prefix }}{{ $suffix := regexReplaceAll \"^(.{10})(.*)(.{10})$\" $suffix \"$1~$3\" }}{{ $suffix := regexReplaceAll \"[\\\\s-_~/]*~[\\\\s-_~/]*\" $suffix \"~\" }}{{ print $prefix $suffix }}",
+          "template": "{{ $prefix := regexFind \"^.*?/\" .HEAD}}{{ $suffix := trimPrefix $prefix .HEAD}}{{ $prefix := replace \"/\" \"<d>/</d>\" $prefix }}{{ $suffix := regexReplaceAll \"^(.{10})(.*)(.{10})$\" $suffix \"$1~$3\" }}{{ $suffix := regexReplaceAll \"[\\\\s-_~/]*~[\\\\s-_~/]*\" $suffix \"~\" }}{{ print $prefix $suffix }}",
           "background": "p:background",
           "foreground": "p:git"
         },
@@ -94,7 +91,7 @@
       "alignment": "right",
       "segments": [
         {
-          "properties": {
+          "options": {
             "always_enabled": true,
             "style": "austin"
           },
@@ -105,7 +102,7 @@
           "foreground": "p:executiontime"
         },
         {
-          "properties": {
+          "options": {
             "time_format": "15:04:05"
           },
           "style": "plain",

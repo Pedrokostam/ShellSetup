@@ -83,6 +83,7 @@ function add_installed($items)
    $null = $alreadyInstalled.AddRange($items)
 }
 
+
 ################################
 ####### establish platform
 ################################
@@ -91,7 +92,11 @@ if ($PSVersionTable.PSVersion.Major -le 5 -or  $PSVersionTable.OS -like '*window
 {
    $availablePlatforms = @('windows')
    # install winget cli
-   Install-Module -Name Microsoft.WinGet.Client
+   $wingetClient = Get-Module -ListAvailable | Where-Object Name -EQ  'Microsoft.WinGet.Client'
+   if(-not $wingetClient)
+   {
+      Install-Module -Name 'Microsoft.WinGet.Client' -AcceptLicense
+   }
    $null = $alreadyInstalled.AddRange( (Get-WinGetPackage -Source winget | ForEach-Object id))
    $scoopInstalled = Get-Command scoop -ea SilentlyContinue
    if ($scoopInstalled)
@@ -166,7 +171,7 @@ function get-installer([string]$name)
 
 function install ($node)
 {
-   Write-Host "`nProcessing $($node.name)..." -NoNewline
+   Write-Host "Processing $($node.name)..." -NoNewline
    ### installation instruction for the given platform
    $installRequest = $null
    foreach ($platform in $availablePlatforms)
@@ -312,7 +317,7 @@ if ($installed)
 if ($notInstalled)
 {
    Write-Host "`nThe following applications were NOT installed during this script:" -ForegroundColor red
-   $notInstalled | Sort-Object Reason
+   $notInstalled | Sort-Object Reason | Write-Output -NoEnumerate
 }
 
 ################################
