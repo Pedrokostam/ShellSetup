@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+echo "Elevation will be required at some points of the installation process."
+echo 
+echo "The cript will attempt to run a sudo command to cache credentials"
+
+sudo echo "Password cached"
+
 FORCE=false
 CONFIRM=true
 for arg in "$@"; do
@@ -24,9 +30,9 @@ fi
 
 print_checkpoint(){
     local MSG=$1
-    echo -e "\e[36m##################"
-    echo          "###   $MSG"
-    echo -e "##################\e[0m"
+    echo -e "\e[36m###"
+    echo          "#####   $MSG"
+    echo -e       "###\e[0m"
 }
 
 add_to_path() {
@@ -35,10 +41,11 @@ add_to_path() {
    if echo "$PATH" | grep -qE "(^|:)${DIR}(:|$)"; then
        echo "$DIR is already in PATH"
    else
-       echo "" > "$PROFILE"
+       echo "" >> "$PROFILE"
        echo "export PATH=\"\$PATH:$DIR\"" >> "$PROFILE"
        source "$PROFILE"
        print_checkpoint "Added $DIR to PATH"
+       echo $PATH
    fi
 }
 
@@ -96,10 +103,12 @@ if ! command -v pwsh &> /dev/null
 then
    if command -v yay &> /dev/null
    then
+      print_checkpoint "Installing pwsh with yay"
       PKG_MGR="yay"
       INSTALL_CMD="yay -Sy --noconfirm powershell-bin"
    elif command -v apt &> /dev/null
    then
+      print_checkpoint "Installing pwsh on debian-based platform (requires root)"
       PKG_MGR="apt"
       INSTALL_CMD="sudo $SCRIPT_DIR/bash/ubuntu_pwsh_install_script.sh"
    fi
@@ -130,3 +139,5 @@ then
        	pwsh -noprofile "$SCRIPT_DIR/Setup.ps1"
     fi
 fi
+
+exec "$SHELL"

@@ -44,6 +44,7 @@
    "apps": [
       {
          "name": "scoop",
+         "checkName": true,
          "windows": {
             "elevated": false,
             "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
@@ -110,6 +111,7 @@
       },
       {
          "name": "zoxide",
+         "checkName": true,
          "windows": {
             "name": "ajeetdsouza.zoxide"
          },
@@ -144,6 +146,7 @@
       },
       {
          "name": "PowerShell",
+         "checkName": "pwsh",
          "windows": {
             "name": "Microsoft.PowerShell"
          },

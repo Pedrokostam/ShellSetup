@@ -1,137 +1,176 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema",
-  "title": "Generated Schema",
-  "description": "Generated from JSON data",
-  "type": "object",
-  "properties": {
-    "$schema": {
-      "type": "string",
-      "description": ""
-    },
-    "defaults": {
-      "type": "object",
-      "patternProperties": {
-        "^\\w+$": {
-          "type": "object",
-          "description": "System platform",
-          "properties": {
-            "default": {
-              "$ref": "#/$refs/ident",
-              "description": "Default installer for the platform. If not specified, the first installer will be used."
-            },
-            "installers": {
-              "items": {
-                "properties": {
-                  "command": {
-                    "$ref": "#/$refs/cmd",
-                    "description": "Command with which apps can be installed. It must contain '$name' which will be replaced with the app name."
-                  },
-                  "elevated": {
-                    "$ref": "#/$refs/elev"
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "uniqueItems": true,
-              "minItems": 1
-            }
-          },
-          "if": {
-            "properties": {
-              "installers": {
-                "minItems": 2
-              }
-            }
-          },
-          "then": {
-            "required": ["default"],
-            "description": "Must specify default installers if there are multiple available installers"
-          },
-          "required": ["installers"],
-          "additionalProperties": false
-        }
+   "$schema": "https://json-schema.org/draft-07/schema",
+   "title": "Generated Schema",
+   "description": "Generated from JSON data",
+   "type": "object",
+   "properties": {
+      "$schema": {
+         "type": "string",
+         "description": ""
       },
-      "additionalProperties": false
-    },
-    "apps": {
-      "type": "array",
-      "description": "Apps to install",
-      "items": {
-        "type": "object",
-        "required": ["name"],
-        "properties": {
-          "name": {
-            "$ref": "#/$refs/appIdent"
-          }
-        },
-        "additionalProperties": false,
-        "minProperties": 2,
-        "patternProperties": {
-          "^(windows|debian|ubuntu|arch)$": {
-            "oneOf": [
-              {
-                "type": "object",
-                "description": "Detailed installation instructions.",
-                "anyOf": [
-                  { "required": ["installer"] },
-                  { "required": ["elevated"] },
-                  { "required": ["name"] }
-                ],
-                "properties": {
-                  "name": {
-                    "$ref": "#/$refs/appIdent"
+      "defaults": {
+         "type": "object",
+         "patternProperties": {
+            "^\\w+$": {
+               "type": "object",
+               "description": "System platform",
+               "properties": {
+                  "default": {
+                     "$ref": "#/$refs/ident",
+                     "description": "Default installer for the platform. If not specified, the first installer will be used."
                   },
-                  "installer": {
-                    "$ref": "#/$refs/ident",
-                    "description": "Which installer to use, defaults to the default installer for the platform. Must refer to one of existing installers."
-                  },
-                  "elevated": {
-                    "$ref": "#/$refs/elev"
+                  "installers": {
+                     "items": {
+                        "properties": {
+                           "command": {
+                              "$ref": "#/$refs/cmd",
+                              "description": "Command with which apps can be installed. It must contain '$name' which will be replaced with the app name."
+                           },
+                           "elevated": {
+                              "$ref": "#/$refs/elev"
+                           },
+                           "additionalProperties": false
+                        }
+                     },
+                     "uniqueItems": true,
+                     "minItems": 1
                   }
-                },
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "description": "Custom installation command.",
-                "properties": {
-                  "command": {
-                    "$ref": "#/$refs/ident",
-                    "description": "Custom command with which the app can be installed. If it contains '$name' it will be replaced with the app name."
-                  },
-                  "name": {
-                    "$ref": "#/$refs/appIdent"
-                  },
-                  "elevated": {
-                    "$ref": "#/$refs/elev"
+               },
+               "if": {
+                  "properties": {
+                     "installers": {
+                        "minItems": 2
+                     }
                   }
-                },
-                "required": ["command", "elevated"],
-                "additionalProperties": false
-              },
-              {
-                "type": "boolean",
-                "description": "Whether to use the default installer with name of containing node."
-              }
+               },
+               "then": {
+                  "required": [
+                     "default"
+                  ],
+                  "description": "Must specify default installers if there are multiple available installers"
+               },
+               "required": [
+                  "installers"
+               ],
+               "additionalProperties": false
+            }
+         },
+         "additionalProperties": false
+      },
+      "apps": {
+         "type": "array",
+         "description": "Apps to install",
+         "items": {
+            "type": "object",
+            "required": [
+               "name"
             ],
-            "minProperties": 1
-          }
-        }
+            "properties": {
+               "name": {
+                  "$ref": "#/$refs/appIdent"
+               },
+               "checkName": {
+                  "oneOf": [
+                     {
+                        "$ref": "#/$refs/ident",
+                        "description": "The name that should be tested whether it's available in PATH. If not given will not be checked."
+                     },
+                     {
+                        "type": "boolean",
+                        "description": "Indicates whether to use app name when checking PATH for installed apps. Defaults to false."
+                     }
+                  ]
+               }
+            },
+            "additionalProperties": false,
+            "minProperties": 2,
+            "patternProperties": {
+               "^(windows|debian|ubuntu|arch)$": {
+                  "oneOf": [
+                     {
+                        "type": "object",
+                        "description": "Detailed installation instructions.",
+                        "anyOf": [
+                           {
+                              "required": [
+                                 "installer"
+                              ]
+                           },
+                           {
+                              "required": [
+                                 "elevated"
+                              ]
+                           },
+                           {
+                              "required": [
+                                 "name"
+                              ]
+                           }
+                        ],
+                        "properties": {
+                           "name": {
+                              "$ref": "#/$refs/appIdent"
+                           },
+                           "installer": {
+                              "$ref": "#/$refs/ident",
+                              "description": "Which installer to use, defaults to the default installer for the platform. Must refer to one of existing installers."
+                           },
+                           "elevated": {
+                              "$ref": "#/$refs/elev"
+                           }
+                        },
+                        "additionalProperties": false
+                     },
+                     {
+                        "type": "object",
+                        "description": "Custom installation command.",
+                        "properties": {
+                           "command": {
+                              "$ref": "#/$refs/ident",
+                              "description": "Custom command with which the app can be installed. If it contains '$name' it will be replaced with the app name."
+                           },
+                           "name": {
+                              "$ref": "#/$refs/appIdent"
+                           },
+                           "elevated": {
+                              "$ref": "#/$refs/elev"
+                           }
+                        },
+                        "required": [
+                           "command",
+                           "elevated"
+                        ],
+                        "additionalProperties": false
+                     },
+                     {
+                        "type": "boolean",
+                        "description": "Whether to use the default installer with name of containing node."
+                     }
+                  ],
+                  "minProperties": 1
+               }
+            }
+         },
+         "minItems": 1
+      }
+   },
+   "$refs": {
+      "ident": {
+         "type": "string",
+         "pattern": "^(\\S.*\\S|\\S+)$"
       },
-      "minItems": 1
-    }
-  },
-  "$refs": {
-    "ident": { "type": "string", "pattern": "^(\\S.*\\S|\\S+)$" },
-    "elev": {
-      "type": "boolean",
-      "description": "Whether the installer should be run as an elevated or non-elevated user."
-    },
-    "appIdent": {
-      "type": "string",
-      "pattern": "^(\\S.*\\S|\\S+)$",
-      "description": "Identifier of the app used when friendly name is not enough."
-    },
-    "cmd": { "type": "string", "pattern": "^\\S.*\\$name.*$" }
-  }
+      "elev": {
+         "type": "boolean",
+         "description": "Whether the installer should be run as an elevated or non-elevated user."
+      },
+      "appIdent": {
+         "type": "string",
+         "pattern": "^(\\S.*\\S|\\S+)$",
+         "description": "Identifier of the app used when friendly name is not enough."
+      },
+      "cmd": {
+         "type": "string",
+         "pattern": "^\\S.*\\$name.*$"
+      }
+   }
 }

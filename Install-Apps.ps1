@@ -13,15 +13,21 @@
     Explanation of the function or its result. You can include multiple examples with additional .EXAMPLE lines
 #>
 [CmdletBinding()]
-param ()
-
+param (
+   [Parameter()]
+   [Switch]
+   [Alias('Quiet')]
+   $NoSummary
+)
 ################################
 ####### global vars
 ################################
-$alreadyInstalled = [System.Collections.ArrayList]::new()
+$existingApplications = [System.Collections.ArrayList]::new()
 $notInstalled = [System.Collections.ArrayList]::new()
 $installed = [System.Collections.ArrayList]::new()
-$elevationError = 'Elevation required'
+$installedBefore = [System.Collections.ArrayList]::new()
+$elevationRequiredError = 'Elevation required'
+$elevationForbiddenError = 'Non-elevated user required'
 $availablePlatforms=@()
 
 ################################
@@ -50,10 +56,26 @@ function Test-IsElevated
 # adds node to notinstalled
 function report_fail($node, [string]$reason)
 {
+   Write-Host $reason -ForegroundColor Yellow
    $null = $notInstalled.Add([PSCustomObject]@{
          Name   = $node.name
          Reason = $reason
       })
+}
+
+function report_skip($node )
+{
+   Write-Host  "Different platform" -ForegroundColor Yellow
+   $null = $notInstalled.Add([PSCustomObject]@{
+         Name   = $node.name
+         Reason = "Different platform"
+      })
+}
+
+function report_preinstalled($node)
+{
+   Write-Host 'Already installed' -ForegroundColor Green
+   $null = $installedBefore.Add($node.name)
 }
 
 # adds node to installed
@@ -80,7 +102,7 @@ function fail_soft([string]$msg)
 # appends app list to alreadyInstalled
 function add_installed($items)
 {
-   $null = $alreadyInstalled.AddRange($items)
+   $null = $existingApplications.AddRange($items)
 }
 
 
@@ -97,7 +119,7 @@ if ($PSVersionTable.PSVersion.Major -le 5 -or  $PSVersionTable.OS -like '*window
    {
       Install-Module -Name 'Microsoft.WinGet.Client' -AcceptLicense
    }
-   $null = $alreadyInstalled.AddRange( (Get-WinGetPackage -Source winget | ForEach-Object id))
+   $null = $existingApplications.AddRange( (Get-WinGetPackage -Source winget | ForEach-Object id))
    $scoopInstalled = Get-Command scoop -ea SilentlyContinue
    if ($scoopInstalled)
    {
@@ -120,10 +142,11 @@ if ($PSVersionTable.PSVersion.Major -le 5 -or  $PSVersionTable.OS -like '*window
       fail_if $true "Unrecognized Linux OS"
    }
 }
-$alreadyInstalled = $alreadyInstalled | Select-Object -Unique
+$existingApplications = $existingApplications | Select-Object -Unique
 #
 fail_if (-not $availablePlatforms) "Unrecognized OS $($PSVersionTable.Platform) - $($PSVersionTable.OS)"
 #
+$isCurrentScriptElevated = Test-IsElevated
 
 ################################
 ####### get apps to install
@@ -183,12 +206,6 @@ function install ($node)
          break
       }
    }
-   if (-not $installRequest)
-   {
-      Write-Host 'Skipped (platform)' -ForegroundColor Yellow
-      report_fail $node 'Different platform'
-      return
-   }
    ### names is either the general name or the custom name from the request
    $name = if ($installRequest.name)
    { 
@@ -197,16 +214,29 @@ function install ($node)
    {
       $node.name 
    }
-
    ### Check if the app is already installed
-   $isAlreadyInstalled =[bool]($alreadyInstalled | Where-Object { $name -ilike "*$_*" -or $_ -ilike "*$name*"})
-   if ($isAlreadyInstalled)
+   $isExistingApplication =[bool]($existingApplications | Where-Object { $name -ilike "*$_*" -or $_ -ilike "*$name*"})
+   if ((-not $isExistingApplication) -and $node.checkName)
    {
-      Write-Host 'Already installed' -ForegroundColor Yellow
-      report_fail $node 'Already installed'
+      $checkName = if ($node.checkName -is [string])
+      {
+         $node.checkName
+      } else
+      {
+         $node.name
+      }
+      $isExistingApplication = [bool](Get-Command $checkName -ErrorAction SilentlyContinue)
+   }
+   if ($isExistingApplication)
+   {
+      report_preinstalled $node
       return
    }
-    
+   if (-not $installRequest)
+   {
+      report_skip $node
+      return
+   }
    ### Installer is either custom, a command, or default
    $installer = if ($installRequest.installer)
    {
@@ -244,16 +274,14 @@ function install ($node)
    {
       $installer.elevated
    }
-
-   if ($elevationRequired -ne (Test-IsElevated))
+   if ($elevationRequired -ne $isCurrentScriptElevated)
    {
-      Write-Host 'Skipped (elevation)' -ForegroundColor Yellow
       $msg = if ($elevationRequired)
       {
-         $elevationError 
+         $elevationRequiredError 
       } else
       { 
-         'Non-elevated user required' 
+         $elevationForbiddenError
       }
       report_fail $node $msg
       return
@@ -305,7 +333,7 @@ foreach ($app in $apps)
 ################################
 ####### report success
 ################################
-if ($installed)
+if ((-not $NoSummary.IsPresent) -and $installed)
 {
    Write-Host "`nThe following applications were installed:" -ForegroundColor Green
    $installed
@@ -314,7 +342,7 @@ if ($installed)
 ################################
 ####### report failed
 ################################
-if ($notInstalled)
+if ((-not $NoSummary.IsPresent) -and  $notInstalled)
 {
    Write-Host "`nThe following applications were NOT installed during this script:" -ForegroundColor red
    $notInstalled | Sort-Object Reason | Write-Output -NoEnumerate
@@ -324,7 +352,10 @@ if ($notInstalled)
 ####### file report
 ################################
 @{
-   installed=$installed
-   not_installed=$notInstalled
-   redo_with_elevation=[bool]($notInstalled | Where-Object Reason -eq $elevationError)
+   installed = $installed
+   preinstalled = $installedBefore
+   not_installed = $notInstalled
+   was_elevated = $isCurrentScriptElevated
+   redo_without_elevation = [bool]($notInstalled | Where-Object Reason -eq $elevationForbiddenError)
+   redo_with_elevation = [bool]($notInstalled | Where-Object Reason -eq $elevationRequiredError)
 } | ConvertTo-Json > "$PSScriptRoot/install_report.json"
