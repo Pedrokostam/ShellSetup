@@ -60,7 +60,9 @@
       },
       {
          "name": "fastfetch",
-         "windows": true,
+         "windows": {
+            "name": "Fastfetch-cli.Fastfetch"
+         },
          "arch": true,
          "debian": true
       },
