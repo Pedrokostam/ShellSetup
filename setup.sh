@@ -99,6 +99,13 @@ CUSTOM_RC_FILE_PATH="$SCRIPT_DIR/bash/profile_kostam.sh"
 SOURCE_LINE="source \"$CUSTOM_RC_FILE_PATH\""
 add_to_file "$SOURCE_LINE" "$HOME/.profile"
 
+if command -v fish &> /dev/null
+then
+   CUSTOM_RC_FILE_PATH="$SCRIPT_DIR/fish/profile_kostam.fish"
+   SOURCE_LINE="source \"$CUSTOM_RC_FILE_PATH\""
+   add_to_file "$SOURCE_LINE" "$HOME/.config/fish/config.fish"
+fi
+
 if ! command -v pwsh &> /dev/null
 then
    if command -v yay &> /dev/null

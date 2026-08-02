@@ -30,13 +30,9 @@
          "installers": [
             {
                "name": "pacman",
-               "command": "pacman -Syq --noconfirm $name",
+               "prepare": "pacman -Syq",
+               "command": "pacman -Sq --needed --noconfirm $name",
                "elevated": true
-            },
-            {
-               "name": "yay",
-               "command": "yay -Syq --noconfirm $name",
-               "elevated": false
             }
          ]
       }
@@ -154,6 +150,12 @@
          },
          "debian": false,
          "arch": false
+      },
+      {
+         "name": "neovim",
+         "arch": true,
+         "debian": true,
+         "windows": true
       }
    ]
 }

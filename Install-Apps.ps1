@@ -28,7 +28,7 @@ $installed = [System.Collections.ArrayList]::new()
 $installedBefore = [System.Collections.ArrayList]::new()
 $elevationRequiredError = 'Elevation required'
 $elevationForbiddenError = 'Non-elevated user required'
-$availablePlatforms=@()
+$availablePlatforms = @()
 
 ################################
 ####### global functions
@@ -40,12 +40,14 @@ function Test-IsElevated
       # Windows check
       $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
       return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-   } elseif ($PSVersionTable.Platform -eq 'Unix')
+   }
+   elseif ($PSVersionTable.Platform -eq 'Unix')
    {
       # Linux/macOS check
       # 'id -u' returns the User ID, '0' indicates the root user
       return (id -u) -eq 0
-   } else
+   }
+   else
    {
       # Other platforms/unknown
       Write-Warning 'Unable to determine elevation status on this platform.'
@@ -74,7 +76,7 @@ function report_skip($node )
 
 function report_preinstalled($node)
 {
-   Write-Host 'Already installed' -ForegroundColor Green
+   Write-Host "Already installed - $($node.name)" -ForegroundColor Green
    $null = $installedBefore.Add($node.name)
 }
 
@@ -110,12 +112,12 @@ function add_installed($items)
 ####### establish platform
 ################################
 $os = $PSVersionTable.OS
-if ($PSVersionTable.PSVersion.Major -le 5 -or  $PSVersionTable.OS -like '*window*')
+if ($PSVersionTable.PSVersion.Major -le 5 -or $PSVersionTable.OS -like '*window*')
 {
    $availablePlatforms = @('windows')
    # install winget cli
    $wingetClient = Get-Module -ListAvailable | Where-Object Name -EQ  'Microsoft.WinGet.Client'
-   if(-not $wingetClient)
+   if (-not $wingetClient)
    {
       Install-Module -Name 'Microsoft.WinGet.Client' -AcceptLicense
    }
@@ -125,19 +127,22 @@ if ($PSVersionTable.PSVersion.Major -le 5 -or  $PSVersionTable.OS -like '*window
    {
       add_installed (scoop list | ForEach-Object name)
    }
-} elseif ($PSVersionTable.Platform -like '*unix*')
+}
+elseif ($PSVersionTable.Platform -like '*unix*')
 {
    $etc = Get-Content /etc/os-release | ConvertFrom-StringData
    $idlike = $etc.id_like
-   if ($idlike -like '*ubuntu*' -or $idlike -like '*debian*')
+   if ($idlike -ilike '*ubuntu*' -or $idlike -ilike '*debian*')
    {
       $availablePlatforms = @('ubuntu', 'debian')   
       add_installed (dpkg-query -f '${binary:Package}\n' -W)
-   } elseif ($idlike -like '*arch*')
+   }
+   elseif ($idlike -ilike '*arch*' -or $idlike -ilike "*cachy*")
    {
       $availablePlatforms = @('arch')
       add_installed (pacman -Qq)
-   } else
+   }
+   else
    {
       fail_if $true "Unrecognized Linux OS"
    }
@@ -171,7 +176,8 @@ $defaultInstaller = if ($defaultInstallersForSystem.default)
 { 
    $defaultConf = $defaultInstallersForSystem.default
    $defaultInstallersForSystem.installers | Where-Object name -EQ "$defaultConf" 
-} else
+}
+else
 {
    $defaultInstallersForSystem.installers[0] 
 }
@@ -186,6 +192,8 @@ $config = [PSCustomObject]@{
    DefaultInstaller = $defaultInstaller
    Installers       = $defaultInstallersForSystem
 }
+
+$prepared = [System.Collections.ArrayList]::new() 
 
 function get-installer([string]$name)
 {
@@ -210,18 +218,21 @@ function install ($node)
    $name = if ($installRequest.name)
    { 
       $installRequest.name 
-   } else
+   }
+   else
    {
       $node.name 
    }
    ### Check if the app is already installed
-   $isExistingApplication =[bool]($existingApplications | Where-Object { $name -ilike "*$_*" -or $_ -ilike "*$name*"})
+   $existingApplications > lista.txt
+   $isExistingApplication = [bool]($existingApplications | Where-Object { $name -ieq $_ -or $_ -ilike "*$name*" })
    if ((-not $isExistingApplication) -and $node.checkName)
    {
       $checkName = if ($node.checkName -is [string])
       {
          $node.checkName
-      } else
+      }
+      else
       {
          $node.name
       }
@@ -244,25 +255,29 @@ function install ($node)
       if ($installRequestInstaller)
       {
          $installRequestInstaller
-      } else
+      }
+      else
       {
          fail_soft "Invalid installer for $($node.name) - $($installRequest.installer)"
          report_fail $node 'No installer'
          return
       }
-   } elseif ($installRequest.command)
+   }
+   elseif ($installRequest.command)
    {
       [PSCustomObject]@{
          command  = $installRequest.command
          elevated = if ($installRequest.elevated)
          {
             $installRequest.elevated 
-         } else
+         }
+         else
          { 
             $false 
          }
       }
-   } else
+   }
+   else
    {
       $config.DefaultInstaller
    }
@@ -270,7 +285,8 @@ function install ($node)
    $elevationRequired = if ($installRequest.elevated -is [bool])
    {
       $installRequest.elevated
-   } else
+   }
+   else
    {
       $installer.elevated
    }
@@ -279,7 +295,8 @@ function install ($node)
       $msg = if ($elevationRequired)
       {
          $elevationRequiredError 
-      } else
+      }
+      else
       { 
          $elevationForbiddenError
       }
@@ -287,10 +304,19 @@ function install ($node)
       return
    }
 
+   if ($installer.prepare -and $installer.name -inotin $prepared)
+   {
+      Write-Host "Preparing installer $($installer.name)" -ForegroundColor Magenta
+      $errorOutput = @()
+      $installer.prepare | Invoke-Expression -ErrorAction Continue -ErrorVariable +errorOutput
+      $prepared.Add($installer.name)
+   }
+
    $cmd = if ($installRequest.command)
    {
       $installRequest.command 
-   } else
+   }
+   else
    {
       $installer.command 
    }
@@ -303,7 +329,8 @@ function install ($node)
    try
    {
       $cmd | Invoke-Expression -ErrorAction Continue -ErrorVariable +errorOutput
-   } catch
+   }
+   catch
    {
       $errorOutput = $_
    }
@@ -316,7 +343,8 @@ function install ($node)
    {
       fail_soft "Could not install $($node.name)"
       report_fail $node $errorOutput
-   } else
+   }
+   else
    {
       report_success $node
    }
@@ -342,7 +370,7 @@ if ((-not $NoSummary.IsPresent) -and $installed)
 ################################
 ####### report failed
 ################################
-if ((-not $NoSummary.IsPresent) -and  $notInstalled)
+if ((-not $NoSummary.IsPresent) -and $notInstalled)
 {
    Write-Host "`nThe following applications were NOT installed during this script:" -ForegroundColor red
    $notInstalled | Sort-Object Reason | Write-Output -NoEnumerate
@@ -352,10 +380,10 @@ if ((-not $NoSummary.IsPresent) -and  $notInstalled)
 ####### file report
 ################################
 @{
-   installed = $installed
-   preinstalled = $installedBefore
-   not_installed = $notInstalled
-   was_elevated = $isCurrentScriptElevated
-   redo_without_elevation = [bool]($notInstalled | Where-Object Reason -eq $elevationForbiddenError)
-   redo_with_elevation = [bool]($notInstalled | Where-Object Reason -eq $elevationRequiredError)
+   installed              = $installed
+   preinstalled           = $installedBefore
+   not_installed          = $notInstalled
+   was_elevated           = $isCurrentScriptElevated
+   redo_without_elevation = [bool]($notInstalled | Where-Object Reason -EQ $elevationForbiddenError)
+   redo_with_elevation    = [bool]($notInstalled | Where-Object Reason -EQ $elevationRequiredError)
 } | ConvertTo-Json > "$PSScriptRoot/install_report.json"

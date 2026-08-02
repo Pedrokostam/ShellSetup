@@ -26,6 +26,10 @@
                               "$ref": "#/$refs/cmd",
                               "description": "Command with which apps can be installed. It must contain '$name' which will be replaced with the app name."
                            },
+                           "prepare": {
+                              "$ref": "#/$refs/arbitCmd",
+                              "description": "Optional command to execute before installing the first app with that installer."
+                           },
                            "elevated": {
                               "$ref": "#/$refs/elev"
                            },
@@ -171,6 +175,10 @@
       "cmd": {
          "type": "string",
          "pattern": "^\\S.*\\$name.*$"
+      },
+      "arbitCmd": {
+         "type": "string",
+         "pattern": "^(\\S.*\\S|\\S+)$"
       }
    }
 }
