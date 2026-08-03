@@ -62,47 +62,30 @@
          "windows": {
             "elevated": false,
             "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
-         },
-         "debian": false,
-         "fedora": false,
-         "opensuse": false,
-         "arch": false
+         }
       },
       {
          "name": "flatpak",
-         "windows": false,
          "arch": false,
-         "debian": true,
-         "fedora": true,
-         "opensuse": true
+         "linux": true
       },
       {
          "name": "fastfetch",
          "windows": {
             "name": "Fastfetch-cli.Fastfetch"
          },
-         "arch": true,
-         "debian": true,
-         "fedora": true,
-         "opensuse": true
+         "linux": true
       },
       {
          "name": "git",
-         "debian": true,
-         "arch": true,
-         "fedora": true,
-         "opensuse": true,
          "windows": {
             "name": "Git.Git",
             "elevated": true
-         }
+         },
+         "linux": true
       },
       {
          "name": "Notepad++",
-         "debian": false,
-         "arch": false,
-         "fedora": false,
-         "opensuse": false,
          "windows": {
             "name": "Notepad++.Notepad++"
          }
@@ -115,33 +98,27 @@
          "arch": {
             "name": "extra/jq"
          },
-         "debian": true,
-         "fedora": true,
-         "opensuse": true
+         "linux": true
       },
       {
          "name": "ripgrep",
          "windows": {
             "installer": "scoop"
          },
-         "arch": true,
-         "debian": true,
-         "fedora": true,
-         "opensuse": true
+         "linux": true
       },
       {
          "name": "micro",
-         "debian": true,
          "windows": {
             "name": "zyedidia.micro"
          },
          "arch": {
             "name": "extra/micro"
          },
-         "fedora": true,
          "opensuse": {
             "name": "micro-editor"
-         }
+         },
+         "linux": true
       },
       {
          "name": "zoxide",
@@ -149,19 +126,7 @@
          "windows": {
             "name": "ajeetdsouza.zoxide"
          },
-         "debian": {
-            "elevated": false,
-            "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-         },
-         "arch": {
-            "elevated": false,
-            "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-         },
-         "fedora": {
-            "elevated": false,
-            "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-         },
-         "opensuse": {
+         "linux": {
             "elevated": false,
             "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
          }
@@ -171,45 +136,81 @@
          "windows": {
             "name": "junegunn.fzf"
          },
-         "debian": true,
          "arch": {
             "name": "extra/fzf"
          },
-         "fedora": true,
-         "opensuse": true
+         "linux": true
       },
       {
          "name": "Firefox",
-         "debian": false,
          "windows": {
             "name": "Mozilla.Firefox"
          },
+         "debian": false,
          "arch": {
             "name": "extra/firefox"
          },
-         "fedora": true,
          "opensuse": {
             "name": "MozillaFirefox"
-         }
+         },
+         "linux": true
       },
       {
          "name": "PowerShell",
          "checkName": "pwsh",
          "windows": {
             "name": "Microsoft.PowerShell"
-         },
-         "debian": false,
-         "arch": false,
-         "fedora": false,
-         "opensuse": false
+         }
       },
       {
          "name": "neovim",
-         "arch": true,
-         "debian": true,
          "windows": true,
-         "fedora": true,
-         "opensuse": true
+         "linux": true
+      },
+      {
+         "name": "npm",
+         "checkName": true,
+         "windows": {
+            "name": "OpenJS.NodeJS"
+         },
+         "opensuse": {
+            "name": "nodejs npm"
+         },
+         "linux": true
+      },
+      {
+         "name": "uv",
+         "checkName": true,
+         "windows": {
+            "name": "astral-sh.uv"
+         },
+         "linux": {
+            "elevated": false,
+            "command": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+         }
+      },
+      {
+         "name": "ruff",
+         "checkName": true,
+         "windows": {
+            "name": "astral-sh.ruff"
+         },
+         "linux": {
+            "elevated": false,
+            "command": "curl -LsSf https://astral.sh/ruff/install.sh | sh"
+         }
+      },
+      {
+         "name": "pyright",
+         "checkName": true,
+         "windows": {
+            "elevated": false,
+            "command": "npm install -g pyright"
+         },
+         "linux": {
+            "elevated": true,
+            "command": "npm install -g pyright"
+         }
       }
    ]
 }

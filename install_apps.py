@@ -216,10 +216,15 @@ def install(node: dict, ctx: Ctx) -> None:
 
     request = None
     for p in ctx.platforms:
-        val = node.get(p)
-        if val:
-            request = val
+        if p in node:
+            if node[p]:
+                request = node[p]
             break
+    else:
+        # no distro-specific key present; fall back to a shared "linux" entry (never on windows).
+        # a distro key set to false breaks the loop above, so it skips without hitting the fallback.
+        if "windows" not in ctx.platforms and node.get("linux"):
+            request = node["linux"]
     req = request if isinstance(request, dict) else {}
     name = req.get("name") or node["name"]
 
