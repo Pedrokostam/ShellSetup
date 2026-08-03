@@ -39,9 +39,16 @@ if (-not $git)
 else
 {
    $gitconfigPath = Get-Item $psscriptroot/git/myconfig.gitconfig | ForEach-Object FullName
-   Write-Host "Including file '$gitconfigPath' in the global git configuration... " -NoNewline -Foreground Green
-   git config --global include.path $gitconfigPath
-   Write-Host 'DONE' -Foreground Green
+   if ((git config --global --get-all include.path) -notcontains $gitconfigPath)
+   {
+      Write-Host "Including file '$gitconfigPath' in the global git configuration... " -NoNewline -Foreground Green
+      git config --global --add include.path $gitconfigPath
+      Write-Host 'DONE' -Foreground Green
+   }
+   else
+   {
+      Write-Host "File '$gitconfigPath' already included in the global git configuration" -Foreground Green
+   }
 }
 ################################
 ####### set up oh-my-posh
@@ -147,6 +154,38 @@ else
    $line > $Profile
 }
 ################################
+####### ensure python (for install_apps.py)
+################################
+# function Test-Python39
+# {
+#    foreach ($exe in 'python3', 'python', 'py')
+#    {
+#       if (-not (Get-Command $exe -ErrorAction SilentlyContinue)) { continue }
+#       $ver = & $exe -c 'import sys;print(f"{sys.version_info[0]}.{sys.version_info[1]}")' 2>$null
+#       if ($ver -and [version]$ver -ge [version]'3.9') { return $exe }
+#    }
+#    return $null
+# }
+#
+# $python = Test-Python39
+# if (-not $python)
+# {
+#    if ($PSVersionTable.OS -like '*windows*')
+#    {
+#       # Python Install Manager (pymanager) - the new official installer; legacy .exe ends with 3.16.
+#       Write-Host 'Installing Python via Python Install Manager...' -Foreground Green
+#       winget install 9NQ7512CXL7T -e --accept-package-agreements --disable-interactivity --source winget
+#       # 'py' may not be on PATH in this session yet; a fresh shell picks it up.
+#       py install
+#    }
+#    else
+#    {
+#       Write-Error 'Python 3.9+ not found. Install it via setup.sh / your package manager.'
+#    }
+#    $python = Test-Python39
+# }
+
+################################
 ####### install apps
 ################################
 
@@ -167,6 +206,7 @@ $inst = read_or_skip $Confirm.IsPresent "Do you want to proceed with app install
 if (check_input $inst)
 {
    . $PSScriptRoot/Install-Apps.ps1 -NoSummary
+   # & $python $PSScriptRoot/install_apps.py -q
    $output = add_results
 
    if ($output.redo_with_elevation -and (-not $output.was_elevated))
@@ -175,6 +215,7 @@ if (check_input $inst)
       if (check_input $inst)
       {
          sudo -E pwsh -noprofile $PSScriptRoot/Install-Apps.ps1 -NoSummary
+         # sudo -E $python $PSScriptRoot/install_apps.py -q
          $output = add_results
       }
    }
@@ -185,6 +226,7 @@ if (check_input $inst)
       if (check_input $inst)
       {
          runuser -u $env:SUDO_USER -- pwsh -noprofile $PSScriptRoot/Install-Apps.ps1 -NoSummary
+         # runuser -u $env:SUDO_USER -- $python $PSScriptRoot/install_apps.py -q
          $output = add_results
       }
    }
@@ -208,7 +250,7 @@ if (check_input $inst)
       Write-Host "`nNot installed apps" -ForegroundColor Yellow
       $finNotInstalled | Sort-Object -Property Reason, Name |
          Where-Object { $_.Name } |
-         ForEach-Object { "$($_Name) - $($_.Reason)" } |
+         ForEach-Object { "$($_.Name) - $($_.Reason)" } |
          Select-Object -Unique |
          ForEach-Object { Write-Host $_ -ForegroundColor DarkYellow }
    }

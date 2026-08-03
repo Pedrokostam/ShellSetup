@@ -2,7 +2,7 @@
 
 echo "Elevation will be required at some points of the installation process."
 echo 
-echo "The cript will attempt to run a sudo command to cache credentials"
+echo "The script will attempt to run a sudo command to cache credentials"
 
 sudo echo "Password cached"
 
@@ -78,8 +78,12 @@ then
 	echo "Git is not installed! Aliases will no be added"
 else
 	GIT_CONFIG_PATH="$SCRIPT_DIR/git/myconfig.gitconfig"
-	echo "Including file '$GIT_CONFIG_PATH' in the global git configuration... "
-	git config --global include.path "$GIT_CONFIG_PATH"
+	if git config --global --get-all include.path | grep -qxF "$GIT_CONFIG_PATH"; then
+		echo "File '$GIT_CONFIG_PATH' already included in the global git configuration"
+	else
+		echo "Including file '$GIT_CONFIG_PATH' in the global git configuration... "
+		git config --global --add include.path "$GIT_CONFIG_PATH"
+	fi
 fi
 
 
@@ -134,6 +138,17 @@ then
    fi
 fi
 
+
+# ensure python 3.9+ for install_apps.py
+# if ! command -v python3 &> /dev/null || ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'; then
+#    print_checkpoint "Installing Python 3.9+"
+#    # python is in Arch's official repos, so pacman suffices (no AUR/yay needed, unlike powershell-bin).
+#    if command -v pacman &> /dev/null; then
+#       sudo pacman -Sy --noconfirm python
+#    elif command -v apt &> /dev/null; then
+#       sudo apt install -y python3
+#    fi
+# fi
 
 print_checkpoint "Basic installation for linux shell completed. The rest requires Pwsh."
 

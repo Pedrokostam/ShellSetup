@@ -224,7 +224,6 @@ function install ($node)
       $node.name 
    }
    ### Check if the app is already installed
-   $existingApplications > lista.txt
    $isExistingApplication = [bool]($existingApplications | Where-Object { $name -ieq $_ -or $_ -ilike "*$name*" })
    if ((-not $isExistingApplication) -and $node.checkName)
    {
@@ -251,7 +250,7 @@ function install ($node)
    ### Installer is either custom, a command, or default
    $installer = if ($installRequest.installer)
    {
-      $installRequestInstaller = get-installer $matching.installer
+      $installRequestInstaller = get-installer $installRequest.installer
       if ($installRequestInstaller)
       {
          $installRequestInstaller
