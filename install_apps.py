@@ -32,6 +32,41 @@ ELEVATION_FORBIDDEN = "Non-elevated user required"
 _INSTALLER_KEYS = {"name", "command", "elevated", "prepare"}
 
 
+class Command:
+    cmd: str
+
+    def __init__(self, s: str):
+        self.cmd = s
+
+
+@dataclass
+class InstallInstruction:
+    app_name: str
+    installer: Installer | Command
+    elevated: bool | None
+
+
+@dataclass
+class AppRequest:
+    name: str
+    check_name: str | None
+    instructions: dict[str, InstallInstruction]
+
+    @classmethod
+    def parse(cls, ctx: Ctx, node: dict):
+        name: str = ""
+        for k, v in node.items():
+            app_name: str|None=None
+            elevated: bool | None = None
+            installer: Installer | Command | None = None
+            if k == "name":
+                name = v
+            elif inst := ctx.get_installer(k):
+                if isinstance(v, bool) and bool(v):
+                    installer = inst
+                elif not isinstance(v,bool):
+
+
 @dataclass
 class Installer:
     name: str
@@ -41,10 +76,16 @@ class Installer:
 
 
 @dataclass
+class NotInstalled:
+    name: str
+    reason: str
+
+
+@dataclass
 class Report:
     installed: list[str] = field(default_factory=list)
     preinstalled: list[str] = field(default_factory=list)
-    not_installed: list[dict] = field(default_factory=list)
+    not_installed: list[NotInstalled] = field(default_factory=list)
     was_elevated: bool = False
     redo_without_elevation: bool = False
     redo_with_elevation: bool = False
@@ -59,6 +100,28 @@ class Ctx:
     default_installer: Installer
     prepared: set[str] = field(default_factory=set)
     report: Report = field(default_factory=Report)
+
+    def get_installer(self, name: str) -> Installer | None:
+        return next(
+            (i for i in self.installers if i.name.casefold() == name.casefold()), None
+        )
+
+    def report_fail(self, node: dict, reason: str) -> None:
+        print(reason)
+        ni = NotInstalled(name=node["name"], reason=reason)
+        self.report.not_installed.append(ni)
+
+    def report_skip(self, node: dict) -> None:
+        print("Different platform")
+        ni = NotInstalled(name=node["name"], reason="Different platform")
+        self.report.not_installed.append(ni)
+
+    def report_preinstalled(self, node: dict) -> None:
+        print(f"Already installed - {node['name']}")
+        self.report.preinstalled.append(node["name"])
+
+    def report_success(self, node: dict) -> None:
+        self.report.installed.append(node["name"])
 
 
 def is_elevated() -> bool:
@@ -211,50 +274,24 @@ def resolve_defaults(
     return installers, default
 
 
-def get_installer(name: str, ctx: Ctx) -> Installer | None:
-    return next((i for i in ctx.installers if i.name == name), None)
-
-
-def report_fail(ctx: Ctx, node: dict, reason: str) -> None:
-    print(reason)
-    ctx.report.not_installed.append({"Name": node["name"], "Reason": reason})
-
-
-def report_skip(ctx: Ctx, node: dict) -> None:
-    print("Different platform")
-    ctx.report.not_installed.append(
-        {"Name": node["name"], "Reason": "Different platform"}
-    )
-
-
-def report_preinstalled(ctx: Ctx, node: dict) -> None:
-    print(f"Already installed - {node['name']}")
-    ctx.report.preinstalled.append(node["name"])
-
-
-def report_success(ctx: Ctx, node: dict) -> None:
-    ctx.report.installed.append(node["name"])
-
-
 def install(node: dict, ctx: Ctx) -> None:
     print(f"Processing {node['name']}...", end="")
 
-    request = None
+    requested_installer = None
     for p in ctx.platforms:
         if p in node:
             if node[p]:
-                request = node[p]
+                requested_installer = node[p]
             break
     else:
         # no distro-specific key present; fall back to a shared "linux" entry (never on windows).
-        # a distro key set to false breaks the loop above, so it skips without hitting the fallback.
         if "windows" not in ctx.platforms and node.get("linux"):
-            request = node["linux"]
+            requested_installer = node["linux"]
         # check for the match-all node
         elif node.get("any"):
-            request = node["any"]
+            requested_installer = node["any"]
 
-    req = request if isinstance(request, dict) else {}
+    req = requested_installer if isinstance(requested_installer, dict) else {}
     name = req.get("name") or node["name"]
 
     is_existing = any(
@@ -265,17 +302,17 @@ def install(node: dict, ctx: Ctx) -> None:
         check_name = check if isinstance(check, str) else node["name"]
         is_existing = shutil.which(check_name) is not None
     if is_existing:
-        report_preinstalled(ctx, node)
+        ctx.report_preinstalled(node)
         return
-    if not request:
-        report_skip(ctx, node)
+    if not requested_installer:
+        ctx.report_skip(node)
         return
 
     if req.get("installer"):
-        inst = get_installer(req["installer"], ctx)
+        inst = ctx.get_installer(req["installer"])
         if inst is None:
             print(f"Invalid installer for {node['name']} - {req['installer']}")
-            report_fail(ctx, node, "No installer")
+            ctx.report_fail(node, "No installer")
             return
     elif req.get("command"):
         inst = Installer(
@@ -290,10 +327,10 @@ def install(node: dict, ctx: Ctx) -> None:
     # key absent = inherit the installer's policy; key present (incl. null) = use it verbatim.
     policy = req.get("elevated", inst.elevated)
     if policy is True and not ctx.is_elevated:
-        report_fail(ctx, node, ELEVATION_REQUIRED)
+        ctx.report_fail(node, ELEVATION_REQUIRED)
         return
     if policy is False and ctx.is_elevated:
-        report_fail(ctx, node, ELEVATION_FORBIDDEN)
+        ctx.report_fail(node, ELEVATION_FORBIDDEN)
         return
 
     if inst.prepare and inst.name not in ctx.prepared:
@@ -305,9 +342,9 @@ def install(node: dict, ctx: Ctx) -> None:
     print(f"Executing {cmd}")
     if run_command(cmd) != 0:
         print(f"Could not install {node['name']}")
-        report_fail(ctx, node, "Install command failed")
+        ctx.report_fail(node, "Install command failed")
     else:
-        report_success(ctx, node)
+        ctx.report_success(node)
 
 
 def main() -> None:
@@ -325,7 +362,7 @@ def main() -> None:
             install(app, ctx)
         except Exception as e:
             print(f"Error while processing {app['name']}: {e}")
-            report_fail(ctx, app, str(e))
+            ctx.report_fail(app, str(e))
 
     r = ctx.report
     if not args.no_summary and r.installed:
@@ -337,16 +374,14 @@ def main() -> None:
             "\nThe following applications were NOT installed during this script:",
             Color.YELLOW,
         )
-        for n in sorted(r.not_installed, key=lambda x: x["Reason"]):
-            print(f"{n['Name']} - {n['Reason']}")
+        for n in sorted(r.not_installed, key=lambda x: x.reason):
+            print(f"{n.name} - {n.reason}")
 
     r.was_elevated = ctx.is_elevated
     r.redo_without_elevation = any(
-        n["Reason"] == ELEVATION_FORBIDDEN for n in r.not_installed
+        n.reason == ELEVATION_FORBIDDEN for n in r.not_installed
     )
-    r.redo_with_elevation = any(
-        n["Reason"] == ELEVATION_REQUIRED for n in r.not_installed
-    )
+    r.redo_with_elevation = any(n.reason == ELEVATION_REQUIRED for n in r.not_installed)
     REPORT_JSON.write_text(json.dumps(asdict(r), indent=2))
 
 
