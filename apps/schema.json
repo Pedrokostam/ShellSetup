@@ -89,7 +89,7 @@
             "additionalProperties": false,
             "minProperties": 2,
             "patternProperties": {
-               "^(windows|debian|ubuntu|arch|fedora|opensuse|linux)$": {
+               "^(windows|debian|ubuntu|arch|fedora|opensuse|linux|any)$": {
                   "oneOf": [
                      {
                         "type": "object",
@@ -164,8 +164,11 @@
          "pattern": "^(\\S.*\\S|\\S+)$"
       },
       "elev": {
-         "type": "boolean",
-         "description": "Whether the installer should be run as an elevated or non-elevated user."
+         "type": [
+            "boolean",
+            "null"
+         ],
+         "description": "Elevation policy: true = must be elevated (errors if not, all OSes); false = must be non-elevated (e.g. scoop); null = don't check, just run."
       },
       "appIdent": {
          "type": "string",

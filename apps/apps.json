@@ -7,7 +7,7 @@
             {
                "name": "winget",
                "command": "winget install --id $name --accept-package-agreements -e --scope user -h --source winget",
-               "elevated": false
+               "elevated": null
             },
             {
                "name": "scoop",
@@ -79,8 +79,7 @@
       {
          "name": "git",
          "windows": {
-            "name": "Git.Git",
-            "elevated": true
+            "name": "Git.Git"
          },
          "linux": true
       },
@@ -204,7 +203,7 @@
          "name": "pyright",
          "checkName": true,
          "windows": {
-            "elevated": false,
+            "elevated": null,
             "command": "npm install -g pyright"
          },
          "linux": {

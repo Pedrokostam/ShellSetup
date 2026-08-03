@@ -4,6 +4,7 @@
 Port of Install-Apps.ps1. Stdlib only. Run under the newest available Python;
 3.9 is the supported floor.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -17,7 +18,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-if sys.version_info < (3, 9):
+if sys.version_info < (3, 9):  # noqa: UP036
     sys.exit("Python 3.9+ required")
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -34,7 +35,7 @@ _INSTALLER_KEYS = {"name", "command", "elevated", "prepare"}
 class Installer:
     name: str
     command: str | None = None
-    elevated: bool = False
+    elevated: bool | None = False
     prepare: str | None = None
 
 
@@ -125,9 +126,18 @@ def windows_existing() -> set[str]:
     if shutil.which("winget"):
         tmp = Path(tempfile.gettempdir()) / "winget_export.json"
         subprocess.run(
-            ["winget", "export", "-o", str(tmp), "--source", "winget",
-             "--disable-interactivity", "--accept-source-agreements"],
-            capture_output=True, text=True,
+            [
+                "winget",
+                "export",
+                "-o",
+                str(tmp),
+                "--source",
+                "winget",
+                "--disable-interactivity",
+                "--accept-source-agreements",
+            ],
+            capture_output=True,
+            text=True,
         )
         try:
             if tmp.exists():
@@ -168,7 +178,9 @@ def make_installer(d: dict) -> Installer:
     return Installer(**{k: v for k, v in d.items() if k in _INSTALLER_KEYS})
 
 
-def resolve_defaults(data: dict, platforms: list[str]) -> tuple[list[Installer], Installer]:
+def resolve_defaults(
+    data: dict, platforms: list[str]
+) -> tuple[list[Installer], Installer]:
     conf = None
     chosen = None
     for system in platforms:
@@ -199,7 +211,9 @@ def report_fail(ctx: Ctx, node: dict, reason: str) -> None:
 
 def report_skip(ctx: Ctx, node: dict) -> None:
     print("Different platform")
-    ctx.report.not_installed.append({"Name": node["name"], "Reason": "Different platform"})
+    ctx.report.not_installed.append(
+        {"Name": node["name"], "Reason": "Different platform"}
+    )
 
 
 def report_preinstalled(ctx: Ctx, node: dict) -> None:
@@ -225,6 +239,10 @@ def install(node: dict, ctx: Ctx) -> None:
         # a distro key set to false breaks the loop above, so it skips without hitting the fallback.
         if "windows" not in ctx.platforms and node.get("linux"):
             request = node["linux"]
+        # check for the match-all node
+        elif node.get("any"):
+            request = node["any"]
+
     req = request if isinstance(request, dict) else {}
     name = req.get("name") or node["name"]
 
@@ -249,17 +267,22 @@ def install(node: dict, ctx: Ctx) -> None:
             report_fail(ctx, node, "No installer")
             return
     elif req.get("command"):
-        inst = Installer(name="__custom__", command=req["command"],
-                         elevated=bool(req.get("elevated", False)))
+        inst = Installer(
+            name="__custom__",
+            command=req["command"],
+            elevated=req.get("elevated", False),
+        )
     else:
         inst = ctx.default_installer
 
-    if isinstance(req.get("elevated"), bool):
-        elevation_required = req["elevated"]
-    else:
-        elevation_required = inst.elevated
-    if elevation_required != ctx.is_elevated:
-        report_fail(ctx, node, ELEVATION_REQUIRED if elevation_required else ELEVATION_FORBIDDEN)
+    # elevation policy: True = must be elevated, False = must be non-elevated, None = don't check.
+    # key absent = inherit the installer's policy; key present (incl. null) = use it verbatim.
+    policy = req.get("elevated", inst.elevated)
+    if policy is True and not ctx.is_elevated:
+        report_fail(ctx, node, ELEVATION_REQUIRED)
+        return
+    if policy is False and ctx.is_elevated:
+        report_fail(ctx, node, ELEVATION_FORBIDDEN)
         return
 
     if inst.prepare and inst.name not in ctx.prepared:
@@ -300,8 +323,12 @@ def main() -> None:
             print(f"{n['Name']} - {n['Reason']}")
 
     r.was_elevated = ctx.is_elevated
-    r.redo_without_elevation = any(n["Reason"] == ELEVATION_FORBIDDEN for n in r.not_installed)
-    r.redo_with_elevation = any(n["Reason"] == ELEVATION_REQUIRED for n in r.not_installed)
+    r.redo_without_elevation = any(
+        n["Reason"] == ELEVATION_FORBIDDEN for n in r.not_installed
+    )
+    r.redo_with_elevation = any(
+        n["Reason"] == ELEVATION_REQUIRED for n in r.not_installed
+    )
     REPORT_JSON.write_text(json.dumps(asdict(r), indent=2))
 
 
