@@ -94,6 +94,11 @@ def detect_platforms() -> list[str]:
         return ["ubuntu", "debian"]
     if "arch" in ident or "cachy" in ident:
         return ["arch"]
+    # RHEL clones carry "rhel" in ID_LIKE; exclude them (their repos lack many of these apps).
+    if "fedora" in ident and "rhel" not in ident:
+        return ["fedora"]
+    if "suse" in ident:
+        return ["opensuse"]
     sys.exit(f"Unrecognized Linux OS: {osrel.get('ID', '?')}")
 
 
@@ -147,6 +152,8 @@ def existing_apps(platforms: list[str]) -> set[str]:
         return windows_existing()
     if "arch" in platforms:
         return set(run_lines(["pacman", "-Qq"]))
+    if "fedora" in platforms or "opensuse" in platforms:
+        return set(run_lines(["rpm", "-qa", "--qf", "%{NAME}\n"]))
     return set(run_lines(["dpkg-query", "-f", "${binary:Package}\n", "-W"]))
 
 

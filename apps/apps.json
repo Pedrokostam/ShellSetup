@@ -25,6 +25,24 @@
             }
          ]
       },
+      "fedora": {
+         "installers": [
+            {
+               "name": "dnf",
+               "command": "dnf install -y $name",
+               "elevated": true
+            }
+         ]
+      },
+      "opensuse": {
+         "installers": [
+            {
+               "name": "zypper",
+               "command": "zypper --non-interactive install $name",
+               "elevated": true
+            }
+         ]
+      },
       "arch": {
          "default": "pacman",
          "installers": [
@@ -46,13 +64,17 @@
             "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
          },
          "debian": false,
+         "fedora": false,
+         "opensuse": false,
          "arch": false
       },
       {
          "name": "flatpak",
          "windows": false,
          "arch": false,
-         "debian": true
+         "debian": true,
+         "fedora": true,
+         "opensuse": true
       },
       {
          "name": "fastfetch",
@@ -60,12 +82,16 @@
             "name": "Fastfetch-cli.Fastfetch"
          },
          "arch": true,
-         "debian": true
+         "debian": true,
+         "fedora": true,
+         "opensuse": true
       },
       {
          "name": "git",
          "debian": true,
          "arch": true,
+         "fedora": true,
+         "opensuse": true,
          "windows": {
             "name": "Git.Git",
             "elevated": true
@@ -75,6 +101,8 @@
          "name": "Notepad++",
          "debian": false,
          "arch": false,
+         "fedora": false,
+         "opensuse": false,
          "windows": {
             "name": "Notepad++.Notepad++"
          }
@@ -87,7 +115,9 @@
          "arch": {
             "name": "extra/jq"
          },
-         "debian": true
+         "debian": true,
+         "fedora": true,
+         "opensuse": true
       },
       {
          "name": "ripgrep",
@@ -95,7 +125,9 @@
             "installer": "scoop"
          },
          "arch": true,
-         "debian": true
+         "debian": true,
+         "fedora": true,
+         "opensuse": true
       },
       {
          "name": "micro",
@@ -105,6 +137,10 @@
          },
          "arch": {
             "name": "extra/micro"
+         },
+         "fedora": true,
+         "opensuse": {
+            "name": "micro-editor"
          }
       },
       {
@@ -120,6 +156,14 @@
          "arch": {
             "elevated": false,
             "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+         },
+         "fedora": {
+            "elevated": false,
+            "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+         },
+         "opensuse": {
+            "elevated": false,
+            "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
          }
       },
       {
@@ -130,7 +174,9 @@
          "debian": true,
          "arch": {
             "name": "extra/fzf"
-         }
+         },
+         "fedora": true,
+         "opensuse": true
       },
       {
          "name": "Firefox",
@@ -140,6 +186,10 @@
          },
          "arch": {
             "name": "extra/firefox"
+         },
+         "fedora": true,
+         "opensuse": {
+            "name": "MozillaFirefox"
          }
       },
       {
@@ -149,13 +199,17 @@
             "name": "Microsoft.PowerShell"
          },
          "debian": false,
-         "arch": false
+         "arch": false,
+         "fedora": false,
+         "opensuse": false
       },
       {
          "name": "neovim",
          "arch": true,
          "debian": true,
-         "windows": true
+         "windows": true,
+         "fedora": true,
+         "opensuse": true
       }
    ]
 }

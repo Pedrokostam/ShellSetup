@@ -89,7 +89,7 @@
             "additionalProperties": false,
             "minProperties": 2,
             "patternProperties": {
-               "^(windows|debian|ubuntu|arch)$": {
+               "^(windows|debian|ubuntu|arch|fedora|opensuse)$": {
                   "oneOf": [
                      {
                         "type": "object",
