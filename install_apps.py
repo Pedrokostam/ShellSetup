@@ -17,6 +17,7 @@ import sys
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from python.color import Color, wrap_color, color_print
 
 if sys.version_info < (3, 9):  # noqa: UP036
     sys.exit("Python 3.9+ required")
@@ -113,7 +114,9 @@ def run_lines(cmd: list[str]) -> list[str]:
 
 def scoop_existing() -> set[str]:
     # scoop is a shim on Windows; shell=True resolves it via PATHEXT.
-    out = subprocess.run("scoop export", capture_output=True, text=True, shell=True)
+    out = subprocess.run(
+        "scoop export", capture_output=True, text=True, shell=True, check=False
+    )
     try:
         data = json.loads(out.stdout)
         return {a["Name"] for a in data.get("apps", [])}
@@ -138,6 +141,7 @@ def windows_existing() -> set[str]:
             ],
             capture_output=True,
             text=True,
+            check=False,
         )
         try:
             if tmp.exists():
@@ -169,9 +173,16 @@ def existing_apps(platforms: list[str]) -> set[str]:
 
 def run_command(cmd: str) -> int:
     # windows manifest commands are powershell snippets (e.g. scoop bootstrap).
-    if os.name == "nt":
-        return subprocess.run(["pwsh", "-NoProfile", "-Command", cmd]).returncode
-    return subprocess.run(cmd, shell=True).returncode
+    try:
+        if os.name == "nt":
+            return subprocess.run(
+                ["pwsh", "-NoProfile", "-Command", cmd], check=False
+            ).returncode
+        return subprocess.run(cmd, shell=True, check=False).returncode
+    except OSError as e:
+        # e.g. the interpreter (pwsh) or program isn't on PATH; treat as a failed install.
+        print(f"Could not run command: {e}")
+        return 1
 
 
 def make_installer(d: dict) -> Installer:
@@ -310,15 +321,22 @@ def main() -> None:
     ctx = Ctx(platforms, existing_apps(platforms), is_elevated(), installers, default)
 
     for app in data["apps"]:
-        install(app, ctx)
+        try:
+            install(app, ctx)
+        except Exception as e:
+            print(f"Error while processing {app['name']}: {e}")
+            report_fail(ctx, app, str(e))
 
     r = ctx.report
     if not args.no_summary and r.installed:
-        print("\nThe following applications were installed:")
+        color_print("\nThe following applications were installed:", Color.BRIGHT_GREEN)
         for n in r.installed:
             print(n)
     if not args.no_summary and r.not_installed:
-        print("\nThe following applications were NOT installed during this script:")
+        color_print(
+            "\nThe following applications were NOT installed during this script:",
+            Color.YELLOW,
+        )
         for n in sorted(r.not_installed, key=lambda x: x["Reason"]):
             print(f"{n['Name']} - {n['Reason']}")
 

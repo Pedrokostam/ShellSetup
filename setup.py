@@ -4,6 +4,7 @@
 Workhorse for the thin bootstrappers setup.sh (Linux) and Setup.ps1 (Windows).
 Run under Python 3.9+.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -15,7 +16,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-if sys.version_info < (3, 9):
+from python.color import Color, wrap_color
+
+if sys.version_info < (3, 9):  # noqa: UP036
     sys.exit("Python 3.9+ required")
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -31,11 +34,15 @@ def is_windows() -> bool:
 
 
 def pwsh_exe() -> str | None:
-    return shutil.which("pwsh") or (shutil.which("powershell") if is_windows() else None)
+    return shutil.which("pwsh") or (
+        shutil.which("powershell") if is_windows() else None
+    )
 
 
 def run(cmd, capture: bool = False, shell: bool = False):
-    return subprocess.run(cmd, capture_output=capture, text=True, shell=shell)
+    return subprocess.run(
+        cmd, capture_output=capture, text=True, shell=shell, check=False
+    )
 
 
 def confirm(prompt: str, assume_yes: bool) -> bool:
@@ -65,7 +72,11 @@ def setup_git() -> None:
         return
     cfg = str((SCRIPT_DIR / "git" / "myconfig.gitconfig").resolve())
     out = run(["git", "config", "--global", "--get-all", "include.path"], capture=True)
-    existing = [os.path.normcase(os.path.normpath(e.strip())) for e in out.stdout.splitlines() if e.strip()]
+    existing = [
+        os.path.normcase(os.path.normpath(e.strip()))
+        for e in out.stdout.splitlines()
+        if e.strip()
+    ]
     if os.path.normcase(os.path.normpath(cfg)) in existing:
         print(f"File '{cfg}' already included in the global git configuration")
         return
@@ -81,9 +92,20 @@ def ensure_pwsh() -> None:
         if not shutil.which("winget"):
             print("winget not found; cannot install PowerShell.", file=sys.stderr)
             return
-        run(["winget", "install", "--id", "Microsoft.PowerShell", "-e",
-             "--accept-package-agreements", "--accept-source-agreements",
-             "--disable-interactivity", "--source", "winget"])
+        run(
+            [
+                "winget",
+                "install",
+                "--id",
+                "Microsoft.PowerShell",
+                "-e",
+                "--accept-package-agreements",
+                "--accept-source-agreements",
+                "--disable-interactivity",
+                "--source",
+                "winget",
+            ]
+        )
     elif shutil.which("yay"):
         # powershell-bin is an AUR package, so an AUR helper is required here.
         run(["yay", "-Sy", "--noconfirm", "powershell-bin"])
@@ -92,15 +114,42 @@ def ensure_pwsh() -> None:
     elif shutil.which("dnf"):
         # pwsh is not in Fedora repos; register the Microsoft RHEL repo. Writing the .repo
         # file directly avoids the dnf4/dnf5 config-manager syntax split.
-        run("sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc", shell=True)
-        run("curl -sSL https://packages.microsoft.com/config/rhel/9.0/prod.repo "
-            "| sudo tee /etc/yum.repos.d/microsoft-prod.repo > /dev/null", shell=True)
+        run(
+            "sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc",
+            shell=True,
+        )
+        run(
+            "curl -sSL https://packages.microsoft.com/config/rhel/9.0/prod.repo "
+            "| sudo tee /etc/yum.repos.d/microsoft-prod.repo > /dev/null",
+            shell=True,
+        )
         run(["sudo", "dnf", "install", "-y", "powershell"])
     elif shutil.which("zypper"):
-        run("sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc", shell=True)
-        run(["sudo", "zypper", "--non-interactive", "addrepo", "--refresh",
-             "https://packages.microsoft.com/config/opensuse/15/prod.repo", "microsoft"])
-        run(["sudo", "zypper", "--non-interactive", "--gpg-auto-import-keys", "install", "powershell"])
+        run(
+            "sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc",
+            shell=True,
+        )
+        run(
+            [
+                "sudo",
+                "zypper",
+                "--non-interactive",
+                "addrepo",
+                "--refresh",
+                "https://packages.microsoft.com/config/opensuse/15/prod.repo",
+                "microsoft",
+            ]
+        )
+        run(
+            [
+                "sudo",
+                "zypper",
+                "--non-interactive",
+                "--gpg-auto-import-keys",
+                "install",
+                "powershell",
+            ]
+        )
     else:
         print("No supported installer for PowerShell found.", file=sys.stderr)
 
@@ -113,10 +162,16 @@ def setup_oh_my_posh() -> None:
     print("Installing oh-my-posh...")
     if is_windows():
         ps = pwsh_exe()
-        run([ps, "-NoProfile", "-Command",
-             "Set-ExecutionPolicy Bypass -Scope Process -Force; "
-             "Invoke-Expression ((New-Object System.Net.WebClient)."
-             "DownloadString('https://ohmyposh.dev/install.ps1'))"])
+        run(
+            [
+                ps,
+                "-NoProfile",
+                "-Command",
+                "Set-ExecutionPolicy Bypass -Scope Process -Force; "
+                "Invoke-Expression ((New-Object System.Net.WebClient)."
+                "DownloadString('https://ohmyposh.dev/install.ps1'))",
+            ]
+        )
     else:
         run("curl -s https://ohmyposh.dev/install.sh | bash -s", shell=True)
 
@@ -125,15 +180,22 @@ def setup_font() -> None:
     font = "FantasqueSansMono"
     if is_windows():
         ps = pwsh_exe()
-        out = run([ps, "-NoProfile", "-Command",
-                   "(New-Object System.Drawing.Text.InstalledFontCollection).Families | "
-                   "Where-Object { $_.Name -ilike '*FantasqueSans*' }"], capture=True)
+        out = run(
+            [
+                ps,
+                "-NoProfile",
+                "-Command",
+                ("(New-Object System.Drawing.Text.InstalledFontCollection).Families | "
+                "Where-Object { $_.Name -ilike '*FantasqueSans*' }"),
+            ],
+            capture=True,
+        )
         found = bool(out.stdout.strip())
     else:
         out = run("fc-list | grep -i FantasqueSans", capture=True, shell=True)
         found = bool(out.stdout.strip())
     if found:
-        print("Font is already installed")
+        print(wrap_color("Font is already installed",Color.CYAN))
         return
     print("Installing font...")
     run(["oh-my-posh", "font", "install", font])
@@ -170,23 +232,31 @@ def setup_profiles() -> None:
     home = Path.home()
     if not is_windows():
         append_once(home / ".profile", f'export PATH="$PATH:{home / ".local" / "bin"}"')
-        append_once(home / ".bashrc", f'source "{SCRIPT_DIR / "bash" / "bashrc_kostam.sh"}"')
-        append_once(home / ".profile", f'source "{SCRIPT_DIR / "bash" / "profile_kostam.sh"}"')
+        append_once(
+            home / ".bashrc", f'source "{SCRIPT_DIR / "bash" / "bashrc_kostam.sh"}"'
+        )
+        append_once(
+            home / ".profile", f'source "{SCRIPT_DIR / "bash" / "profile_kostam.sh"}"'
+        )
         if shutil.which("fish"):
-            append_once(home / ".config" / "fish" / "config.fish",
-                        f'source "{SCRIPT_DIR / "fish" / "profile_kostam.fish"}"')
+            append_once(
+                home / ".config" / "fish" / "config.fish",
+                f'source "{SCRIPT_DIR / "fish" / "profile_kostam.fish"}"',
+            )
 
     pwsh = shutil.which("pwsh")
     if not pwsh:
         print("pwsh not available; skipping pwsh profile setup.", file=sys.stderr)
         return
-    profile_path = run([pwsh, "-NoProfile", "-Command", "$PROFILE"], capture=True).stdout.strip()
+    profile_path = run(
+        [pwsh, "-NoProfile", "-Command", "$PROFILE"], capture=True
+    ).stdout.strip()
     custom = (SCRIPT_DIR / "pwsh" / "Profile_Kostam.ps1").resolve()
     append_once(Path(profile_path), f". '{custom}'", marker="Profile_Kostam.ps1")
 
 
 def run_installer(cmd) -> dict:
-    subprocess.run(cmd)
+    subprocess.run(cmd, check=False)
     try:
         return json.loads(REPORT_JSON.read_text())
     except (OSError, json.JSONDecodeError):
@@ -229,23 +299,52 @@ def install_apps(assume_yes: bool) -> None:
     reports = [run_installer([sys.executable, INSTALL_APPS, "-q"])]
 
     # elevation retries mirror the original sudo/runuser dance (POSIX only).
-    if not is_windows() and reports[-1].get("redo_with_elevation") and not reports[-1].get("was_elevated"):
-        if confirm("Some apps require elevation to install. Attempt sudo? [Y/n]", assume_yes):
-            reports.append(run_installer(["sudo", "-E", sys.executable, INSTALL_APPS, "-q"]))
+    if (
+        not is_windows()
+        and reports[-1].get("redo_with_elevation")
+        and not reports[-1].get("was_elevated")
+    ):
+        if confirm(
+            "Some apps require elevation to install. Attempt sudo? [Y/n]", assume_yes
+        ):
+            reports.append(
+                run_installer(["sudo", "-E", sys.executable, INSTALL_APPS, "-q"])
+            )
 
-    if not is_windows() and reports[-1].get("redo_without_elevation") and reports[-1].get("was_elevated"):
+    if (
+        not is_windows()
+        and reports[-1].get("redo_without_elevation")
+        and reports[-1].get("was_elevated")
+    ):
         sudo_user = os.environ.get("SUDO_USER")
-        if sudo_user and confirm("Some apps require a non-elevated user. Install them? [Y/n]", assume_yes):
-            reports.append(run_installer(
-                ["runuser", "-u", sudo_user, "--", sys.executable, INSTALL_APPS, "-q"]))
+        if sudo_user and confirm(
+            "Some apps require a non-elevated user. Install them? [Y/n]", assume_yes
+        ):
+            reports.append(
+                run_installer(
+                    [
+                        "runuser",
+                        "-u",
+                        sudo_user,
+                        "--",
+                        sys.executable,
+                        INSTALL_APPS,
+                        "-q",
+                    ]
+                )
+            )
 
     print_summary(reports)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("-y", "--yes", action="store_true", help="assume yes for all prompts")
-    ap.add_argument("--no-modules", action="store_true", help="skip pwsh module installation")
+    ap.add_argument(
+        "-y", "--yes", action="store_true", help="assume yes for all prompts"
+    )
+    ap.add_argument(
+        "--no-modules", action="store_true", help="skip pwsh module installation"
+    )
     args = ap.parse_args()
 
     setup_git()
