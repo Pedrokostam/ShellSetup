@@ -3,10 +3,12 @@
 # Kept Windows PowerShell 5.1 compatible so it runs on a fresh machine (no pwsh 7 yet).
 [CmdletBinding()]
 param (
-   [Alias('Yes')]
-   [switch]$Confirm,
-   [switch]$NoModules
 )
+
+if ($PSVersionTable.PSVersion.Major -ge 7 -and $PSVersionTable.Platform -notlike '*win*')
+{
+   Write-Error "Detected non-windows platform and this script is designed for Windows only. Run the other setup script (.sh or .py)" -ErrorAction Stop
+}
 
 function Test-Python39
 {
@@ -22,12 +24,30 @@ function Test-Python39
 $python = Test-Python39
 if (-not $python)
 {
-   # Python Install Manager (pymanager) - the new official installer; legacy .exe ends with 3.16.
-   Write-Host 'Installing Python via Python Install Manager...' -ForegroundColor Green
-   winget install 9NQ7512CXL7T -e --accept-package-agreements --accept-source-agreements --disable-interactivity --source winget
-   # 'py' may not be on PATH in this session yet; a fresh shell picks it up.
-   py install
-   $python = Test-Python39
+   if (winget -v)
+   {
+      # Python Install Manager (pymanager) - the new official installer; legacy .exe ends with 3.16.
+      Write-Host 'Installing Python via Python Install Manager...' -ForegroundColor Green
+      winget install 9NQ7512CXL7T -e --accept-package-agreements --accept-source-agreements --disable-interactivity --source winget
+      if ($LASTEXITCODE -eq 0)
+      {
+         Write-Host "Python has been installed" -ForegroundColor Green
+         if (py -V)
+         {
+            Write-Host "Python is available in the current session, proceeding with setup"
+         }
+         else
+         {
+            Write-Host "Python has been installed, but this shell session cannot see it. Restart the shell and run the setup again." -ForegroundColor Magenta
+            exit 
+         }
+      }
+   }
+   else
+   {
+      Write-Error "Winget not found - download the python installer manually" -ErrorAction Stop
+   }
+   py install default
 }
 
 if (-not $python)
@@ -36,8 +56,4 @@ if (-not $python)
    exit 1
 }
 
-$argsList = @()
-if ($Confirm.IsPresent) { $argsList += '--yes' }
-if ($NoModules.IsPresent) { $argsList += '--no-modules' }
-
-& $python "$PSScriptRoot/setup.py" @argsList
+& $python "$PSScriptRoot/setup.py"

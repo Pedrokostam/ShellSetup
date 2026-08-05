@@ -53,20 +53,35 @@
                "elevated": true
             }
          ]
+      },
+      "any": {
+         "installers": [
+            {
+               "name": "npm",
+               "command":"npm install -g $name"
+            }
+         ]
       }
    },
    "apps": [
       {
          "name": "scoop",
-         "checkName": true,
          "windows": {
             "elevated": false,
-            "command": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression"
+            "command": "powershell.exe -ExecutionPolicy RemoteSigned -Command \"Invoke-RestMethod -Uri 'https://get.scoop.sh' | Invoke-Expression\""
+         
+         }
+      },
+      {
+         "name":"yay",
+         "windows":false,
+         "arch":{
+            "elevated":false,
+            "script":"arch_yay_install_script.sh"
          }
       },
       {
          "name": "flatpak",
-         "arch": false,
          "linux": true
       },
       {
@@ -94,9 +109,6 @@
          "windows": {
             "name": "jqlang.jq"
          },
-         "arch": {
-            "name": "extra/jq"
-         },
          "linux": true
       },
       {
@@ -111,17 +123,10 @@
          "windows": {
             "name": "zyedidia.micro"
          },
-         "arch": {
-            "name": "extra/micro"
-         },
-         "opensuse": {
-            "name": "micro-editor"
-         },
          "linux": true
       },
       {
          "name": "zoxide",
-         "checkName": true,
          "windows": {
             "name": "ajeetdsouza.zoxide"
          },
@@ -135,19 +140,12 @@
          "windows": {
             "name": "junegunn.fzf"
          },
-         "arch": {
-            "name": "extra/fzf"
-         },
          "linux": true
       },
       {
-         "name": "Firefox",
+         "name": "firefox",
          "windows": {
             "name": "Mozilla.Firefox"
-         },
-         "debian": false,
-         "arch": {
-            "name": "extra/firefox"
          },
          "opensuse": {
             "name": "MozillaFirefox"
@@ -159,27 +157,31 @@
          "checkName": "pwsh",
          "windows": {
             "name": "Microsoft.PowerShell"
+         },
+         "debian": {
+            "script": "ubuntu_pwsh_install_script.sh"
+         },
+         "arch": {
+            "installer":"yay",
+            "name":"powershell-bin"
          }
       },
       {
          "name": "neovim",
-         "windows": true,
-         "linux": true
+         "checkName": "nvim",
+         "any": true
       },
       {
          "name": "npm",
-         "checkName": true,
          "windows": {
             "name": "OpenJS.NodeJS"
          },
-         "opensuse": {
+         "linux": {
             "name": "nodejs npm"
-         },
-         "linux": true
+         }
       },
       {
          "name": "uv",
-         "checkName": true,
          "windows": {
             "name": "astral-sh.uv"
          },
@@ -190,7 +192,6 @@
       },
       {
          "name": "ruff",
-         "checkName": true,
          "windows": {
             "name": "astral-sh.ruff"
          },
@@ -201,14 +202,13 @@
       },
       {
          "name": "pyright",
-         "checkName": true,
          "windows": {
             "elevated": null,
-            "command": "npm install -g pyright"
+            "installer":"npm"
          },
          "linux": {
             "elevated": true,
-            "command": "npm install -g pyright"
+            "installer":"npm"
          }
       }
    ]

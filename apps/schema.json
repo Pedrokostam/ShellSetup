@@ -26,6 +26,7 @@
                               "$ref": "#/$refs/cmd",
                               "description": "Command with which apps can be installed. It must contain '$name' which will be replaced with the app name."
                            },
+                           "executableToCheck":{"ref":"#/$refs/appIdent","description":"Used to check if the installer is available. If ommited, the name will be used."},
                            "prepare": {
                               "$ref": "#/$refs/arbitCmd",
                               "description": "Optional command to execute before installing the first app with that installer."
@@ -132,6 +133,10 @@
                            "command": {
                               "$ref": "#/$refs/ident",
                               "description": "Custom command with which the app can be installed. If it contains '$name' it will be replaced with the app name."
+                           },
+                           "script": {
+                              "$ref": "#/$refs/ident",
+                              "description": "Path to the installation script. The path should be relative to the scripts folder next to this json."
                            },
                            "name": {
                               "$ref": "#/$refs/appIdent"

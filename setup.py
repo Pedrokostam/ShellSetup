@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Machine setup: git config, oh-my-posh, fonts, pwsh + modules, shell profiles, apps.
 
-Workhorse for the thin bootstrappers setup.sh (Linux) and Setup.ps1 (Windows).
 Run under Python 3.9+.
 """
 

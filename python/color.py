@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Color(Enum):
     BLACK = "\033[30m"
     RED = "\033[31m"
@@ -9,7 +10,7 @@ class Color(Enum):
     MAGENTA = "\033[35"
     CYAN = "\033[36m"
     WHITE = "\033[37m"
-    
+
     BRIGHT_BLACK = "\033[90m"
     BRIGHT_RED = "\033[91m"
     BRIGHT_GREEN = "\033[92m"
@@ -22,7 +23,7 @@ class Color(Enum):
     # Style Modifiers
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
-    
+
     # Reset Sequence
     RESET = "\033[0m"
 
@@ -30,14 +31,16 @@ class Color(Enum):
         """Allows direct usage in f-strings without typing '.value'."""
         return self.value
 
-    def wrap(self,s:str)->str:
-        return color_wrap(s,self)
+    def wrap(self, s: str) -> str:
+        return wrap_color(s, self)
 
-    def print(self,s:str,*args,**kwargs):
-        color_print(s,self,*args,**kwargs)
+    def print(self, s: str, *args, **kwargs):
+        color_print(s, self, *args, **kwargs)
 
-def wrap_color(s:str,color:Color)->str:
+
+def wrap_color(s: str, color: Color) -> str:
     return f"{color}{s}{Color.RESET}"
 
-def color_print(s:str,color:Color,*args,**kwargs):
-    print(color_wrap(s,color),*args,**kwargs)
+
+def color_print(s: str, color: Color, *args, **kwargs):
+    print(wrap_color(s, color), *args, **kwargs)

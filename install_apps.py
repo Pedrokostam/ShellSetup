@@ -8,6 +8,7 @@ Port of Install-Apps.ps1. Stdlib only. Run under the newest available Python;
 from __future__ import annotations
 from pprint import pprint
 import sys
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -421,8 +422,8 @@ def test_parsing(json_path: Path):
     for os in CONCRETE_OS:
         with patch("python.overseer.detect_platform", return_value=os):
             ctx = Overseer.create_context(json_path)
-            apps = ctx.parse_requests()
-            print("="*50)
+            apps = ctx._parse_requests()
+            print("=" * 50)
             print(f"Parsed apps for system {os}:\n")
             for a in apps:
                 print(f"   {a}")
@@ -430,10 +431,17 @@ def test_parsing(json_path: Path):
             pprint(ctx)
 
 
+def install(silent: bool):
+    overseer = Overseer.create_context(APPS_JSON,silent)
+    overseer.install()
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("-q", "--no-summary", action="store_true")
+    ap.add_argument("-q", "--quiet", action="store_true")
     ap.add_argument("--test", action="store_true")
     args = ap.parse_args()
     if args.test:
         test_parsing(APPS_JSON)
+        sys.exit(0)
+    install(args.quiet)

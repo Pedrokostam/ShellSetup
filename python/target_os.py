@@ -2,7 +2,7 @@ class AnyOs:
     def __str__(self) -> str:
         return "any" if type(self) is AnyOs else type(self).__name__.lower()
 
-    def __repr__(self)->str:
+    def __repr__(self) -> str:
         return str(self)
 
     def __eq__(self, other: object) -> bool:
@@ -12,6 +12,9 @@ class AnyOs:
 
     def __hash__(self) -> int:
         return hash(str(self))
+
+    def get_more_generic_installers(self) -> list[str]:
+        return [str(x()) for x in self._get_matching_system_classes() if x != type(self)]
 
     def _get_matching_system_classes(self):
         """
