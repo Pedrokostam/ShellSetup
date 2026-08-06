@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import platform
@@ -166,7 +168,7 @@ class Overseer:
 
     @classmethod
     @timed
-    def create_context(cls, apps_json: Path, silent:bool=False) -> Overseer:
+    def create_context(cls, apps_json: Path, silent:bool=False) -> 'Overseer':
         json_data = json.loads(apps_json.read_text(encoding="utf-8"))
         defaults = json_data["defaults"]
 

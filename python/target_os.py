@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class AnyOs:
     def __str__(self) -> str:
         return "any" if type(self) is AnyOs else type(self).__name__.lower()
