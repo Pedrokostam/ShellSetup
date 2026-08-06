@@ -66,6 +66,7 @@
    "apps": [
       {
          "name": "scoop",
+         "group": "package_managers",
          "windows": {
             "elevated": false,
             "command": "powershell.exe -ExecutionPolicy RemoteSigned -Command \"Invoke-RestMethod -Uri 'https://get.scoop.sh' | Invoke-Expression\""
@@ -74,6 +75,7 @@
       },
       {
          "name":"yay",
+         "group": "package_managers",
          "windows":false,
          "arch":{
             "elevated":false,
@@ -82,10 +84,22 @@
       },
       {
          "name": "flatpak",
+         "group": "package_managers",
          "linux": true
       },
       {
+         "name": "npm",
+         "group": "package_managers",
+         "windows": {
+            "name": "OpenJS.NodeJS"
+         },
+         "linux": {
+            "name": "nodejs npm"
+         }
+      },
+      {
          "name": "fastfetch",
+         "group": "cli",
          "windows": {
             "name": "Fastfetch-cli.Fastfetch"
          },
@@ -100,12 +114,14 @@
       },
       {
          "name": "Notepad++",
+         "group": "editors",
          "windows": {
             "name": "Notepad++.Notepad++"
          }
       },
       {
          "name": "jq",
+         "group": "cli",
          "windows": {
             "name": "jqlang.jq"
          },
@@ -113,6 +129,7 @@
       },
       {
          "name": "ripgrep",
+         "group": "cli",
          "windows": {
             "installer": "scoop"
          },
@@ -120,6 +137,7 @@
       },
       {
          "name": "micro",
+         "group": "editors",
          "windows": {
             "name": "zyedidia.micro"
          },
@@ -127,6 +145,7 @@
       },
       {
          "name": "zoxide",
+         "group": "cli",
          "windows": {
             "name": "ajeetdsouza.zoxide"
          },
@@ -137,6 +156,7 @@
       },
       {
          "name": "fzf",
+         "group": "cli",
          "windows": {
             "name": "junegunn.fzf"
          },
@@ -154,6 +174,7 @@
       },
       {
          "name": "PowerShell",
+         "group": "shells",
          "checkName": "pwsh",
          "windows": {
             "name": "Microsoft.PowerShell"
@@ -168,20 +189,13 @@
       },
       {
          "name": "neovim",
+         "group": "editors",
          "checkName": "nvim",
          "any": true
       },
       {
-         "name": "npm",
-         "windows": {
-            "name": "OpenJS.NodeJS"
-         },
-         "linux": {
-            "name": "nodejs npm"
-         }
-      },
-      {
          "name": "uv",
+         "group": "package_managers",
          "windows": {
             "name": "astral-sh.uv"
          },
@@ -192,6 +206,7 @@
       },
       {
          "name": "ruff",
+         "group": "lsp",
          "windows": {
             "name": "astral-sh.ruff"
          },
@@ -202,6 +217,7 @@
       },
       {
          "name": "pyright",
+         "group": "lsp",
          "windows": {
             "elevated": null,
             "installer":"npm"

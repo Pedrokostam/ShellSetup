@@ -80,6 +80,10 @@
                         "description": "Indicates whether to use app name when checking PATH for installed apps. Defaults to false."
                      }
                   ]
+               },
+               "group": {
+                  "$ref": "#/definitions/identifier",
+                  "description": "Optional group to which the app is assigned. Groups can be selectively disabled during installation. If missing, the app is assigned to the core group."
                }
             },
             "additionalProperties": false,

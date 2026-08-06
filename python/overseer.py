@@ -168,7 +168,7 @@ class Overseer:
 
     @classmethod
     @timed
-    def create_context(cls, apps_json: Path, silent:bool=False) -> 'Overseer':
+    def create_context(cls, apps_json: Path, silent: bool = False) -> "Overseer":
         json_data = json.loads(apps_json.read_text(encoding="utf-8"))
         defaults = json_data["defaults"]
 
@@ -200,7 +200,7 @@ class Overseer:
             default_installer=_default_installer,
             _source_json=json_data,
             _silent=silent,
-            report=Report(silent=silent)
+            report=Report(silent=silent),
         )
 
     def _parse_install_instruction(
@@ -252,6 +252,7 @@ class Overseer:
     def _parse_app_request(self, node: dict) -> AppRequest | SkippedApp:
         app_name: str = node["name"]
         check_name: list[str] | None = None
+        group_name: str = node.get("group") or "core"
         check_name_value = node.get("checkName") or True
         if isinstance(check_name_value, bool) and bool(check_name_value):
             check_name = [app_name]
@@ -264,7 +265,9 @@ class Overseer:
 
         if matching_key == None:
             return SkippedApp(
-                app_name=app_name, reason="Not requested for this platform"
+                app_name=app_name,
+                group_name=group_name,
+                reason="Not requested for this platform",
             )
         try:
             instruction = self._parse_install_instruction(
@@ -272,18 +275,23 @@ class Overseer:
             )
             if not instruction:
                 return SkippedApp(
-                    app_name=app_name, reason="Not requested for this platform"
+                    app_name=app_name,
+                    group_name=group_name,
+                    reason="Not requested for this platform",
                 )
 
             if check_name and instruction.package_name not in check_name:
                 check_name.append(instruction.package_name)
 
             return AppRequest(
-                app_name=app_name, check_name=check_name, instructions=instruction
+                app_name=app_name,
+                check_name=check_name,
+                instructions=instruction,
+                group_name=group_name,
             )
 
         except InstallScriptError as e:
-            return SkippedApp(app_name=app_name, reason=str(e))
+            return SkippedApp(app_name=app_name, group_name=group_name, reason=str(e))
 
     def get_installer(self, name: str) -> Installer | None:
         name = name.casefold()
