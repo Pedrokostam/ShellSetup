@@ -10,49 +10,31 @@
       },
       "defaults": {
          "type": "object",
-         "patternProperties": {
-            "^(?!(any|linux)$)\\w+$": {
-               "type": "object",
-               "description": "Concrete system platform",
-               "properties": {
-                  "default": {
-                     "$ref": "#/definitions/identifier",
-                     "description": "Default installer for the platform. If not specified, the first installer will be used."
-                  },
-                  "installers": {
-                     "$ref": "#/definitions/installers"
-                  }
-               },
-               "if": {
-                  "properties": {
-                     "installers": {
-                        "minItems": 2
-                     }
-                  }
-               },
-               "then": {
-                  "required": [
-                     "default"
-                  ],
-                  "description": "Must specify default installers if there are multiple available installers."
-               },
-               "required": [
-                  "installers"
-               ],
-               "additionalProperties": false
+         "properties": {
+            "windows": {
+               "$ref": "#/definitions/concretePlatform",
+               "description": "Installers available on all Windows platforms"
             },
-            "^(any|linux)$": {
-               "type": "object",
-               "description": "Virtual platform: a list of third-party installers that are added to every concrete platform's installers. It has no default installer.",
-               "properties": {
-                  "installers": {
-                     "$ref": "#/definitions/installers"
-                  }
-               },
-               "required": [
-                  "installers"
-               ],
-               "additionalProperties": false
+            "arch": {
+               "$ref": "#/definitions/concretePlatform"
+            },
+            "fedora": {
+               "$ref": "#/definitions/concretePlatform"
+            },
+            "opensuse": {
+               "$ref": "#/definitions/concretePlatform"
+            },
+            "debian": {
+               "$ref": "#/definitions/concretePlatform"
+            },
+            "ubuntu": {
+               "$ref": "#/definitions/concretePlatform"
+            },
+            "linux": {
+               "$ref": "#/definitions/virtualPlatform"
+            },
+            "any": {
+               "$ref": "#/definitions/virtualPlatform"
             }
          },
          "additionalProperties": false
@@ -69,6 +51,10 @@
                "name": {
                   "$ref": "#/definitions/appIdentifier"
                },
+               "prettyName": {
+                  "$ref": "#/definitions/appIdentifier",
+                  "description": "Used when the normal name is unseemly."
+               },
                "checkName": {
                   "oneOf": [
                      {
@@ -84,85 +70,38 @@
                "group": {
                   "$ref": "#/definitions/identifier",
                   "description": "Optional group to which the app is assigned. Groups can be selectively disabled during installation. If missing, the app is assigned to the core group."
+               },
+               "description": {
+                  "type": "string",
+                  "description": "Additional description and details about the app."
+               },
+               "windows": {
+                  "$ref": "#/definitions/appPlatformConfig"
+               },
+               "debian": {
+                  "$ref": "#/definitions/appPlatformConfig"
+               },
+               "ubuntu": {
+                  "$ref": "#/definitions/appPlatformConfig"
+               },
+               "arch": {
+                  "$ref": "#/definitions/appPlatformConfig"
+               },
+               "fedora": {
+                  "$ref": "#/definitions/appPlatformConfig"
+               },
+               "opensuse": {
+                  "$ref": "#/definitions/appPlatformConfig"
+               },
+               "linux": {
+                  "$ref": "#/definitions/appPlatformConfig"
+               },
+               "any": {
+                  "$ref": "#/definitions/appPlatformConfig"
                }
             },
             "additionalProperties": false,
-            "minProperties": 2,
-            "patternProperties": {
-               "^(windows|debian|ubuntu|arch|fedora|opensuse|linux|any)$": {
-                  "oneOf": [
-                     {
-                        "type": "boolean",
-                        "description": "Whether to use the default installer with name of containing node. A missing platform is treated as false."
-                     },
-                     {
-                        "type": "object",
-                        "description": "Installation instructions for the platform.",
-                        "minProperties": 1,
-                        "properties": {
-                           "name": {
-                              "$ref": "#/definitions/appIdentifier"
-                           },
-                           "installer": {
-                              "$ref": "#/definitions/identifier",
-                              "description": "Which installer to use, defaults to the default installer for the platform. Must refer to one of existing installers."
-                           },
-                           "command": {
-                              "$ref": "#/definitions/identifier",
-                              "description": "Custom command with which the app can be installed."
-                           },
-                           "script": {
-                              "$ref": "#/definitions/identifier",
-                              "description": "Path to the installation script. The path should be relative to the scripts folder next to this json."
-                           },
-                           "elevated": {
-                              "$ref": "#/definitions/elevation"
-                           }
-                        },
-                        "dependencies": {
-                           "script": {
-                              "not": {
-                                 "anyOf": [
-                                    {
-                                       "required": [
-                                          "name"
-                                       ]
-                                    },
-                                    {
-                                       "required": [
-                                          "command"
-                                       ]
-                                    },
-                                    {
-                                       "required": [
-                                          "installer"
-                                       ]
-                                    }
-                                 ]
-                              }
-                           },
-                           "command": {
-                              "not": {
-                                 "anyOf": [
-                                    {
-                                       "required": [
-                                          "name"
-                                       ]
-                                    },
-                                    {
-                                       "required": [
-                                          "installer"
-                                       ]
-                                    }
-                                 ]
-                              }
-                           }
-                        },
-                        "additionalProperties": false
-                     }
-                  ]
-               }
-            }
+            "minProperties": 2
          },
          "minItems": 1
       }
@@ -192,7 +131,7 @@
                   "description": "Optional command to execute before installing the first app with that installer."
                },
                "elevated": {
-                  "$ref": "#/definitions/elevation"
+                  "$ref": "#/definitions/perSystemElevation"
                }
             },
             "required": [
@@ -205,6 +144,167 @@
       "identifier": {
          "type": "string",
          "pattern": "^(\\S.*\\S|\\S+)$"
+      },
+      "concretePlatform": {
+         "type": "object",
+         "description": "Concrete system platform",
+         "properties": {
+            "default": {
+               "$ref": "#/definitions/identifier",
+               "description": "Default installer for the platform. If not specified, the first installer will be used."
+            },
+            "installers": {
+               "$ref": "#/definitions/installers"
+            }
+         },
+         "if": {
+            "properties": {
+               "installers": {
+                  "minItems": 2
+               }
+            }
+         },
+         "then": {
+            "required": [
+               "default"
+            ],
+            "description": "Must specify default installers if there are multiple available installers."
+         },
+         "required": [
+            "installers"
+         ],
+         "additionalProperties": false
+      },
+      "virtualPlatform": {
+         "type": "object",
+         "description": "Virtual platform: a list of third-party installers that are added to every concrete platform's installers. It has no default installer.",
+         "properties": {
+            "installers": {
+               "$ref": "#/definitions/installers"
+            }
+         },
+         "required": [
+            "installers"
+         ],
+         "additionalProperties": false
+      },
+      "perSystemElevation": {
+         "description": "Elevation policy: true = must be elevated; false = must be non-elevated; null = runs regardless. Can also be an object mapping keys to policies with a required 'default' key.",
+         "oneOf": [
+            {
+               "type": [
+                  "boolean",
+                  "null"
+               ]
+            },
+            {
+               "type": "object",
+               "required": [
+                  "default"
+               ],
+               "minProperties": 2,
+               "properties": {
+                  "default": {
+                     "$ref": "#/definitions/elevation"
+                  },
+                  "windows": {
+                     "$ref": "#/definitions/elevation"
+                  },
+                  "debian": {
+                     "$ref": "#/definitions/elevation"
+                  },
+                  "ubuntu": {
+                     "$ref": "#/definitions/elevation"
+                  },
+                  "arch": {
+                     "$ref": "#/definitions/elevation"
+                  },
+                  "fedora": {
+                     "$ref": "#/definitions/elevation"
+                  },
+                  "opensuse": {
+                     "$ref": "#/definitions/elevation"
+                  },
+                  "linux": {
+                     "$ref": "#/definitions/elevation"
+                  }
+               },
+               "additionalProperties": false
+            }
+         ]
+      },
+      "appPlatformConfig": {
+         "oneOf": [
+            {
+               "type": "boolean",
+               "description": "Whether to use the default installer with name of containing node. A missing platform is treated as false."
+            },
+            {
+               "type": "object",
+               "description": "Installation instructions for the platform.",
+               "minProperties": 1,
+               "properties": {
+                  "name": {
+                     "$ref": "#/definitions/appIdentifier"
+                  },
+                  "installer": {
+                     "$ref": "#/definitions/identifier",
+                     "description": "Which installer to use, defaults to the default installer for the platform. Must refer to one of existing installers."
+                  },
+                  "command": {
+                     "$ref": "#/definitions/identifier",
+                     "description": "Custom command with which the app can be installed."
+                  },
+                  "script": {
+                     "$ref": "#/definitions/identifier",
+                     "description": "Path to the installation script. The path should be relative to the scripts folder next to this json."
+                  },
+                  "elevated": {
+                     "$ref": "#/definitions/elevation"
+                  }
+               },
+               "dependencies": {
+                  "script": {
+                     "not": {
+                        "anyOf": [
+                           {
+                              "required": [
+                                 "name"
+                              ]
+                           },
+                           {
+                              "required": [
+                                 "command"
+                              ]
+                           },
+                           {
+                              "required": [
+                                 "installer"
+                              ]
+                           }
+                        ]
+                     }
+                  },
+                  "command": {
+                     "not": {
+                        "anyOf": [
+                           {
+                              "required": [
+                                 "name"
+                              ]
+                           },
+                           {
+                              "required": [
+                                 "installer"
+                              ]
+                           }
+                        ]
+                     }
+                  }
+               },
+               "additionalProperties": false
+            }
+         ]
       },
       "elevation": {
          "type": [
@@ -219,10 +319,8 @@
          "description": "Identifier of the app used when friendly name is not enough."
       },
       "dynamicCommand": {
-         "type": "string",
          "pattern": "^\\S.*\\$name(?![A-Za-z0-9_]).*$",
          "description": "Command to be run to install an app. It must contain the placeholder $name, which will be replaced by the app name."
-
       },
       "staticCommand": {
          "type": "string",

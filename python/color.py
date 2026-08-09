@@ -1,4 +1,7 @@
+from collections.abc import Sequence
 from enum import Enum
+
+from python import context
 
 
 class Color(Enum):
@@ -29,6 +32,8 @@ class Color(Enum):
 
     def __str__(self):
         """Allows direct usage in f-strings without typing '.value'."""
+        if context.NO_COLOR:
+            return ""
         return self.value
 
     def wrap(self, s: str) -> str:
@@ -36,6 +41,10 @@ class Color(Enum):
 
     def print(self, s: str, *args, **kwargs):
         color_print(s, self, *args, **kwargs)
+
+
+def wrap_colors(s: str, colors: Sequence[Color]) -> str:
+    return f"{''.join(str(x) for x in colors)}{s}{Color.RESET}"
 
 
 def wrap_color(s: str, color: Color) -> str:

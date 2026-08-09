@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
+
+def is_windows() -> bool:
+    return os.name == "nt"
 
 class AnyOs:
     def __str__(self) -> str:
@@ -16,8 +22,16 @@ class AnyOs:
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def get_more_generic_installers(self) -> list[str]:
-        return [str(x()) for x in self._get_matching_system_classes() if x != type(self)]
+    def get_more_generic_installers(self, include_self: bool = False) -> list[str]:
+        """
+        Returns names of all ancestor classes, except for the one in question
+        """
+        if include_self:
+            return [str(x()) for x in self._get_matching_system_classes()]
+
+        return [
+            str(x()) for x in self._get_matching_system_classes() if x != type(self)
+        ]
 
     def _get_matching_system_classes(self):
         """
@@ -26,8 +40,8 @@ class AnyOs:
         return [cls for cls in type(self).mro() if cls is not object]
 
     def find_most_concrete_system(
-        self, available_systems: list["AnyOs|None"]
-    ) -> "AnyOs|None":
+        self, available_systems: list[AnyOs|None]
+    ) -> AnyOs|None:
         for applicable_os in self._get_matching_system_classes():
             for system_for_app in available_systems:
                 if isinstance(applicable_os(), type(system_for_app)):
@@ -59,8 +73,21 @@ class Debian(Linux):
     pass
 
 
-__ALL_OS = [Debian(), OpenSuse(), Fedora(), Arch(), Windows(), Linux(), AnyOs()]
-CONCRETE_OS = [Debian(), OpenSuse(), Fedora(), Arch(), Windows()]
+class Ubuntu(Debian):
+    pass
+
+
+__ALL_OS = [
+    Ubuntu(),
+    Debian(),
+    OpenSuse(),
+    Fedora(),
+    Arch(),
+    Windows(),
+    Linux(),
+    AnyOs(),
+]
+CONCRETE_OS = [Ubuntu(), Debian(), OpenSuse(), Fedora(), Arch(), Windows()]
 
 
 def get_system_from_string(s: str) -> AnyOs | None:
@@ -69,3 +96,36 @@ def get_system_from_string(s: str) -> AnyOs | None:
         if str(os) == s:
             return os
     return None
+
+
+def parse_os_release() -> dict[str, str]:
+    data: dict[str, str] = {}
+    p = Path("/etc/os-release")
+    if not p.exists():
+        return data
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        data[k] = v.strip().strip('"').strip("'")
+    return data
+
+
+def detect_platform() -> AnyOs:
+    if is_windows():
+        return Windows()
+    osrel = parse_os_release()
+    ident = f"{osrel.get('ID', '')} {osrel.get('ID_LIKE', '')}".lower()
+    if "ubuntu" in ident:
+        return Ubuntu()
+    if "debian" in ident:
+        return Debian()
+    if "arch" in ident or "cachy" in ident:
+        return Arch()
+    # RHEL clones carry "rhel" in ID_LIKE; exclude them
+    if "fedora" in ident and "rhel" not in ident:
+        return Fedora()
+    if "suse" in ident:
+        return OpenSuse()
+    raise OSError(f"Unrecognized Linux OS: {osrel.get('ID', '?')}")

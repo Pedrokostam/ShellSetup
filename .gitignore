@@ -5,3 +5,4 @@ profile_custom.ps1
 powershell.config.json
 install_report.json
 **/__pycache__
+reports

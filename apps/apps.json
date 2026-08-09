@@ -58,7 +58,11 @@
          "installers": [
             {
                "name": "npm",
-               "command":"npm install -g $name"
+               "command": "npm install -g $name",
+               "elevated": {
+                  "default": true,
+                  "windows": null
+               }
             }
          ]
       }
@@ -70,16 +74,15 @@
          "windows": {
             "elevated": false,
             "command": "powershell.exe -ExecutionPolicy RemoteSigned -Command \"Invoke-RestMethod -Uri 'https://get.scoop.sh' | Invoke-Expression\""
-         
          }
       },
       {
-         "name":"yay",
+         "name": "yay",
          "group": "package_managers",
-         "windows":false,
-         "arch":{
-            "elevated":false,
-            "script":"arch_yay_install_script.sh"
+         "windows": false,
+         "arch": {
+            "elevated": false,
+            "script": "arch_yay_install_script.sh"
          }
       },
       {
@@ -95,6 +98,14 @@
          },
          "linux": {
             "name": "nodejs npm"
+         }
+      },
+      {
+         "name": "oh-my-posh",
+         "group": "cli",
+         "windows": true,
+         "linux": {
+            "command": "curl -s https://ohmyposh.dev/install.sh | bash -s"
          }
       },
       {
@@ -129,6 +140,7 @@
       },
       {
          "name": "ripgrep",
+         "checkName": "rg",
          "group": "cli",
          "windows": {
             "installer": "scoop"
@@ -173,6 +185,17 @@
          "linux": true
       },
       {
+         "name": "fish",
+         "group": "shells",
+         "windows": false,
+         "arch": true,
+         "fedora": true,
+         "ubuntu": {
+            "elevated": true,
+            "command": "sudo add-apt-repository ppa:fish-shell/release-4; sudo apt update; sudo apt install fish"
+         }
+      },
+      {
          "name": "PowerShell",
          "group": "shells",
          "checkName": "pwsh",
@@ -180,18 +203,42 @@
             "name": "Microsoft.PowerShell"
          },
          "debian": {
-            "script": "ubuntu_pwsh_install_script.sh"
+            "script": "debian_pwsh_install_script.sh"
          },
          "arch": {
-            "installer":"yay",
-            "name":"powershell-bin"
+            "installer": "yay",
+            "name": "powershell-bin"
+         },
+         "opensuse": {
+            "script": "opensuse_pwsh_install_script.sh"
+         },
+         "fedora": {
+            "script": "fedora_pwsh_install_script.sh"
          }
       },
       {
          "name": "neovim",
          "group": "editors",
          "checkName": "nvim",
+         "windows": {
+            "name": "Neovim.Neovim"
+         },
          "any": true
+      },
+      {
+         "name": "neovide",
+         "group": "editors",
+         "windows": {
+            "name": "Neovide.Neovide"
+         },
+         "arch": true
+      },
+      {
+         "name": "IrfanView",
+         "group": "viewers",
+         "windows": {
+            "name": "IrfanSkiljan.IrfanView"
+         }
       },
       {
          "name": "uv",
@@ -216,15 +263,44 @@
          }
       },
       {
+         "name": "wingety____SDF",
+         "group": "test",
+         "windows":{"installer":"winget"}
+      },
+      {
+         "name": "scoopy____SDf",
+         "group": "test",
+         "windows":{"installer":"scoop"}
+      },
+      {
+         "name": "npmy_____asfd",
+         "group": "test",
+         "windows":{"installer":"npm"}
+      },
+      {
          "name": "pyright",
          "group": "lsp",
          "windows": {
             "elevated": null,
-            "installer":"npm"
+            "installer": "npm"
          },
          "linux": {
             "elevated": true,
-            "installer":"npm"
+            "installer": "npm"
+         }
+      },
+      {
+         "name": "vscode-langservers-extracted",
+         "prettyName":"vscode-langservers",
+         "checkName": "vscode-json-language-server",
+         "description": "Needed for JSON support in neovim",
+         "group": "lsp",
+         "windows": {
+            "installer": "npm"
+         },
+         "linux": {
+            "elevated": true,
+            "installer": "npm"
          }
       }
    ]

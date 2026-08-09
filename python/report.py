@@ -1,71 +1,252 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Sequence
+import json
+from dataclasses import asdict, dataclass
+from enum import Enum, StrEnum, auto
+from pathlib import Path
 
-from python.color import Color, color_print, wrap_color
+from python.color import Color, wrap_color
 from python.error import AppInstallError, InstallScriptError
+from python.filters import ComplexFilter
 
-from .app_request import AppRequest, SkippedApp
-from .not_installed import NotInstalled
+from .app_request import AppRequest, AppRequestStem
+
+
+class Status(StrEnum):
+    FAILED = auto()
+    FAILED_ELEVATION_REQUIRED = auto()
+    FAILED_ELEVATION_FORBIDDEN = auto()
+    FAILED_INSTALLER_UNAVAILABLE = auto()
+    SKIPPED_PLATFORM = auto()
+    SKIPPED_CHOICE = auto()
+    PREINSTALLED = auto()
+    INSTALLED = auto()
+
+    def is_failure(self) -> bool:
+        return (
+            self == Status.FAILED
+            or self == Status.FAILED_ELEVATION_FORBIDDEN
+            or self == Status.FAILED_ELEVATION_REQUIRED
+            or self == Status.FAILED_INSTALLER_UNAVAILABLE
+        )
+
+    def is_skipped(self) -> bool:
+        return self == Status.SKIPPED_CHOICE or self == Status.SKIPPED_PLATFORM
+
+    def is_installed(self) -> bool:
+        return not self.is_failure() and not self.is_skipped()
+
+    def details(self) -> str | None:
+        if self == Status.FAILED_ELEVATION_REQUIRED:
+            return "Elevation prohibited"
+        if self == Status.FAILED_ELEVATION_REQUIRED:
+            return "Requires elevation"
+        if self == Status.FAILED_INSTALLER_UNAVAILABLE:
+            return "Installer unavailable"
+        if self == Status.INSTALLED:
+            return "Installed succesfully"
+        if self == Status.PREINSTALLED:
+            return "Already installed"
+        if self == Status.SKIPPED_CHOICE:
+            return "Manually skipped by user"
+        if self == Status.SKIPPED_PLATFORM:
+            return "Not compatible with current platform"
+        if self == Status.FAILED:
+            return "App installation failed"
+        return None
 
 
 @dataclass
-class InstalledApp:
-    app: AppRequest
-    log: str
+class AppLog:
+    index: int
+    app: AppRequestStem
+    status: Status
+    details: str
+    process_output: str | None
+
+    @property
+    def app_group(self) -> str:
+        return self.app.group_name
+
+    @property
+    def app_name(self) -> str:
+        return self.app.app_name
+
+    @property
+    def app_pretty_name(self) -> str:
+        return self.app.pretty_name
+
+    @property
+    def app_description(self) -> str | None:
+        return self.app.description
 
 
-@dataclass
-class Report:
-    installed_apps: list[InstalledApp] = field(default_factory=list)
-    preinstalled_apps: list[AppRequest] = field(default_factory=list)
-    not_installed_apps: list[NotInstalled | SkippedApp] = field(default_factory=list)
-    failed_apps:list[NotInstalled|InstallScriptError] = field(default_factory=list)
-    was_elevated: bool = False
-    silent: bool = False
+def remove_newline(s: str) -> str:
+    return " ".join(s.splitlines())
 
-    def failed(self, app: NotInstalled|InstallScriptError) -> None:
-        self.failed_apps.append(app)
 
-    def skipped(self, app: SkippedApp) -> None:
-        self.not_installed_apps.append(app)
+class LinePos(Enum):
+    TOP = auto()
+    BOT = auto()
+    SEP = auto()
 
-    def preinstalled(self, app: AppRequest) -> None:
-        self.preinstalled_apps.append(app)
 
-    def succeeded(self, app: AppRequest, log: str) -> None:
-        self.installed_apps.append(InstalledApp(app=app, log=log))
+def crop_word(word: str, limit: int) -> str:
+    if len(word) > (limit - 3):
+        return word[: (limit - 3)] + "…"
+    return word
 
-    def redo_with_elevation(self) -> bool:
-        for notinstalled in self.not_installed_apps:
-            if (
-                isinstance(notinstalled, NotInstalled)
-                and notinstalled.should_redo_with_elevation()
-            ):
-                return True
-        return False
 
-    def redo_without_elevation(self) -> bool:
-        for notinstalled in self.not_installed_apps:
-            if (
-                isinstance(notinstalled, NotInstalled)
-                and notinstalled.should_redo_without_elevation()
-            ):
-                return True
-        return False
+def print_cells(cells: Sequence[tuple[str, int]], color: Color | None = None):
+    box = "│"
+    contents = [f"{crop_word(w, l):^{l}}" for w, l in cells]
+    if color:
+        no_borders = box.join(wrap_color(x, color) for x in contents)
+    else:
+        no_borders = box.join(contents)
+    line = f"{box}{no_borders}{box}"
+    print(line)
 
-    def notify_before(self, apps_to_install: list[AppRequest]):
-        if self.silent:
-            return
-        if self.preinstalled_apps:
-            color_print("Apps already installed:", Color.YELLOW, end=" ")
-            print(*(a.app_name for a in self.preinstalled_apps), sep=", ")
-        if self.not_installed_apps:
-            color_print("Apps that won't be installed:", Color.RED)
-        for a in self.not_installed_apps:
-            print(f"   {a.name()} - {wrap_color(a.reason, Color.RED)}")
-        if apps_to_install:
-            color_print("Apps to install:", Color.GREEN, end="")
-            print(*(a.app_name for a in apps_to_install), sep=", ")
+
+def print_border(typ: LinePos, widths: Sequence[int]):
+    fill = "─"
+    if typ == LinePos.TOP:
+        left = "┌"
+        mid = "┬"
+        right = "┐"
+    elif typ == LinePos.BOT:
+        left = "└"
+        mid = "┴"
+        right = "┘"
+    else:
+        left = "│"
+        mid = "┼"
+        right = "│"
+    parts = [fill * x for x in widths]
+    no_borders = mid.join(parts)
+    line = f"{left}{no_borders}{right}"
+    print(line)
+
+
+def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
+    complex_filter = ComplexFilter.coerce(complex_filter)
+    print(complex_filter.names)
+    als = [a for a in als if complex_filter.filter(a.app)]
+    if not als:
+        print("No apps to list")
+        return
+    als = sorted(als, key=lambda x: (x.app_group, x.app_pretty_name))
+
+    headers = ["App name", "Group", "Details"]
+    header_limits = tuple(map(len, headers))
+    details_limit = 75
+
+    strings = [
+        (
+            a.app_pretty_name,
+            a.app_group,
+            crop_word(remove_newline(a.details), details_limit),
+        )
+        for a in als
+    ]
+    raw_widths = [tuple(len(x) for x in s) for s in strings]
+    widths = tuple(
+        max(max(x,limit) for x in col) + 2
+        for col, limit in zip(zip(*raw_widths), header_limits)
+    )
+    header_content = tuple(zip(headers, widths))
+    print_border(LinePos.TOP, widths)
+    print_cells(header_content)
+    print_border(LinePos.SEP, widths)
+    for s, a in zip(strings, als):
+
+        if a.status.is_installed():
+            color = Color.BRIGHT_GREEN
+        elif a.status.is_failure():
+            color = Color.RED
         else:
-            color_print("No apps to install", Color.GREEN)
+            color = Color.CYAN
+
+        cells = tuple(zip(s, widths))
+        print_cells(
+            cells,
+            color,
+        )
+        # print(f"│{'─'*(name_width+2)}┼{'─'*(group_width+2)}┼{'─'*(details_width+2)}│")
+
+    print_border(LinePos.BOT, widths)
+
+
+class Report:
+    def __init__(self):
+        self.app_logs: dict[str, AppLog] = {}
+
+    def report(
+        self,
+        app: AppRequest | AppRequestStem,
+        status: Status,
+        details: str | InstallScriptError | None,
+        process_output: str | None,
+    ):
+        if isinstance(details, InstallScriptError):
+            details = details.message()
+
+        details = details or status.details() or ""
+
+        al = AppLog(
+            index=len(self.app_logs),
+            status=status,
+            app=app.to_stem(),
+            details=details,
+            process_output=process_output,
+        )
+        self.app_logs[app.app_name] = al
+        return al
+
+    def report_success(self, app: AppRequest, process_output: str | None):
+        return self.report(
+            app=app,
+            status=Status.INSTALLED,
+            details=None,
+            process_output=process_output,
+        )
+
+    def report_fail(
+        self,
+        app: AppRequest | AppRequestStem,
+        process_output: str | None = None,
+        status: Status = Status.FAILED,
+        details: str | InstallScriptError | None = None,
+    ):
+        return self.report(
+            app=app, status=status, details=details, process_output=process_output
+        )
+
+    def report_preinstall(
+        self,
+        app: AppRequest | AppRequestStem,
+        details: str | None = None,
+    ):
+        return self.report(
+            app=app, status=Status.PREINSTALLED, details=details, process_output=None
+        )
+
+    def report_skip(
+        self,
+        app: AppRequest | AppRequestStem,
+        status: Status = Status.SKIPPED_PLATFORM,
+        details: str | AppInstallError | None = None,
+    ):
+        return self.report(app=app, status=status, details=details, process_output=None)
+
+    def get_app_log(self, app: str) -> AppLog | None:
+        return self.app_logs.get(app)
+
+    def print(self, complex_filter: ComplexFilter | None = None):
+        print_many(list(self.app_logs.values()), complex_filter)
+
+    def save_report(self, target: Path):
+        target.parent.mkdir(exist_ok=True, parents=True)
+        with target.open("+w") as f:
+            json.dump([asdict(a) for a in self.app_logs.values()], f, indent=True)

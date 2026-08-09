@@ -1,5 +1,6 @@
 class InstallScriptError(Exception):
-    pass
+    def message(self) -> str:
+        raise NotImplementedError("Subclasses must implement message()")
 
 
 class JsonSyntaxError(InstallScriptError):
@@ -8,6 +9,9 @@ class JsonSyntaxError(InstallScriptError):
     def __init__(self, problem: str):
         super().__init__(f"Malformed JSON: {problem}")
         self.problem = problem
+
+    def message(self) -> str:
+        return f"malformed JSON: {self.problem}"
 
 
 class InstallerError(InstallScriptError):
@@ -19,12 +23,16 @@ class InstallerError(InstallScriptError):
         self.installer = installer
         self.problem = problem
 
+    def message(self) -> str:
+        return f"{self.installer} error: {self.problem}"
+
 
 class AppInstallError(InstallScriptError):
-    app: str
     problem: str
 
-    def __init__(self, app: str, problem: str):
-        super().__init__(f"{app} install error: {problem}")
-        self.app = app
+    def __init__(self, problem: str):
+        super().__init__(f"Install error: {problem}")
         self.problem = problem
+
+    def message(self) -> str:
+        return f"installation error: {self.problem}"
