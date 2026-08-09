@@ -11,7 +11,20 @@
             },
             {
                "name": "scoop",
-               "command": "scoop install $name",
+               "prepare": [
+                  "powershell",
+                  "-file",
+                  "~/scoop/shims/scoop.ps1",
+                  "update"
+               ],
+               "command": [
+                  "powershell",
+                  "-file",
+                  "~/scoop/shims/scoop.ps1",
+                  "install",
+                  "$name",
+                  "--no-update-scoop"
+               ],
                "elevated": false
             }
          ]
@@ -265,17 +278,23 @@
       {
          "name": "wingety____SDF",
          "group": "test",
-         "windows":{"installer":"winget"}
+         "windows": {
+            "installer": "winget"
+         }
       },
       {
          "name": "scoopy____SDf",
          "group": "test",
-         "windows":{"installer":"scoop"}
+         "windows": {
+            "installer": "scoop"
+         }
       },
       {
          "name": "npmy_____asfd",
          "group": "test",
-         "windows":{"installer":"npm"}
+         "windows": {
+            "installer": "npm"
+         }
       },
       {
          "name": "pyright",
@@ -291,7 +310,7 @@
       },
       {
          "name": "vscode-langservers-extracted",
-         "prettyName":"vscode-langservers",
+         "prettyName": "vscode-langservers",
          "checkName": "vscode-json-language-server",
          "description": "Needed for JSON support in neovim",
          "group": "lsp",

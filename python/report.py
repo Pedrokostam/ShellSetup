@@ -152,7 +152,7 @@ def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
     ]
     raw_widths = [tuple(len(x) for x in s) for s in strings]
     widths = tuple(
-        max(max(x,limit) for x in col) + 2
+        max(max(x, limit) for x in col) + 2
         for col, limit in zip(zip(*raw_widths), header_limits)
     )
     header_content = tuple(zip(headers, widths))
@@ -160,7 +160,6 @@ def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
     print_cells(header_content)
     print_border(LinePos.SEP, widths)
     for s, a in zip(strings, als):
-
         if a.status.is_installed():
             color = Color.BRIGHT_GREEN
         elif a.status.is_failure():
@@ -186,7 +185,7 @@ class Report:
         self,
         app: AppRequest | AppRequestStem,
         status: Status,
-        details: str | InstallScriptError | None,
+        details: str | InstallScriptError | AppInstallError | None,
         process_output: str | None,
     ):
         if isinstance(details, InstallScriptError):
@@ -217,7 +216,7 @@ class Report:
         app: AppRequest | AppRequestStem,
         process_output: str | None = None,
         status: Status = Status.FAILED,
-        details: str | InstallScriptError | None = None,
+        details: str | InstallScriptError | AppInstallError | None = None,
     ):
         return self.report(
             app=app, status=status, details=details, process_output=process_output

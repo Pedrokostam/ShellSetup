@@ -319,13 +319,43 @@
          "description": "Identifier of the app used when friendly name is not enough."
       },
       "dynamicCommand": {
-         "pattern": "^\\S.*\\$name(?![A-Za-z0-9_]).*$",
-         "description": "Command to be run to install an app. It must contain the placeholder $name, which will be replaced by the app name."
+         "description": "Command to be run to install an app. It must contain the placeholder $name, which will be replaced by the app name.",
+         "oneOf": [
+            {
+               "type":"string",
+               "pattern": "^\\S.*\\$name(?![A-Za-z0-9_]).*$",
+               "description": "Single string command to be run to install an app. It must contain the placeholder $name, which will be replaced by the app name."
+            },
+            {
+               "type": "array",
+               "description": "String array representation of the command to be run to install an app. It must contain the placeholder $name, which will be replaced by the app name.",
+               "items": {
+                  "type": "string",
+                  "pattern": "^\\S.*\\S"
+               },
+               "contains": {
+                  "const": "$name"
+               }
+            }
+         ]
       },
       "staticCommand": {
-         "type": "string",
-         "pattern": "^(\\S.*\\S|\\S+)$",
-         "description": "Static command to be run to install the app. The command is called as-is."
+         "description": "Static command to be run to install the app. The command is called as-is.",
+         "oneOf": [
+            {
+               "type":"string",
+               "pattern": "^(\\S.*\\S|\\S+)$",
+               "description": "Single string command to be run to install an app."
+            },
+            {
+               "type": "array",
+               "description": "String array representation of the command to be run to install an app.",
+               "items": {
+                  "type": "string",
+                  "pattern": "^\\S.*\\S"
+               }
+            }
+         ]
       }
    }
 }

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .installer import InstallInstruction
+from python.error import AppInstallError
+
+from .installer import InstallInstruction, Installer
 
 DEFAULT_GROUP = "core"
 
@@ -26,6 +28,20 @@ class AppRequest:
     instructions: InstallInstruction
     group_name: str = DEFAULT_GROUP
     description: str | None = None
+
+    def prepare(self, prepared_set: set[str]):
+        if not isinstance(self.instructions.installer, Installer):
+            return
+        inst = self.instructions.installer
+        if inst.name in prepared_set:
+            return
+        print(f"Preparing {inst.name} - {inst.prepare}")
+        if inst.prepare_installer():
+            prepared_set.add(inst.name)
+        else:
+            raise AppInstallError(
+                problem=f"installer {inst.name} could not be prepared"
+            )
 
     @classmethod
     def from_stem(

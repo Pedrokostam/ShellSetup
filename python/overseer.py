@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 import json
 import os
 from dataclasses import dataclass, field
@@ -14,7 +15,7 @@ from python.error import (
 )
 from python.filters import ComplexFilter, Filters
 
-from .installer import Command, Installer, InstallInstruction, Script
+from .installer import CmdParts, Command, Installer, InstallInstruction, Script
 from .report import Report, Status
 from .target_os import *
 
@@ -86,7 +87,7 @@ class Overseer:
         installer_key: str | None = node.get("installer")
         script_key: str | None = node.get("script")
         elevated_key: bool | None = node.get("elevated")
-        command_key: str | None = node.get("command")
+        command_key: str | Sequence[str] | None = node.get("command")
         package_name: str = node.get("name") or app.app_name
         # if the node has only name for the app, treat it as using the default installer
         if package_name and not installer_key:
@@ -94,7 +95,9 @@ class Overseer:
 
         if command_key:
             return InstallInstruction(
-                installer=Command(cmd=command_key, elevation_required=elevated_key),
+                installer=Command(
+                    cmd=CmdParts(command_key), elevation_required=elevated_key
+                ),
                 package_name=package_name,
             )
 
@@ -157,7 +160,7 @@ class Overseer:
         )
 
         if not self.app_filter.filter(ars):
-            self.report.report_skip(ars,status=Status.SKIPPED_CHOICE)
+            self.report.report_skip(ars, status=Status.SKIPPED_CHOICE)
             return None
 
         matching_key = context.CURRENT_PLATFORM.find_most_concrete_system(
@@ -202,9 +205,12 @@ class Overseer:
             self.report.report_fail(app, status=Status.FAILED_ELEVATION_FORBIDDEN)
             return
         try:
+            app.prepare(self.prepared)
             output = app.instructions.execute()
             # output = "mock"
             self.report.report_success(app, output)
+        except AppInstallError as a:
+            self.report.report_fail(app=app, details=a, status=Status.FAILED)
         except Exception as e:  # noqa: BLE001
             self.report.report_fail(app=app, details=str(e), status=Status.FAILED)
 
@@ -218,7 +224,6 @@ class Overseer:
             self._install_app(app)
 
         self.report.save_report(context.report_json_path())
-
 
     @timed
     def print_report(self):

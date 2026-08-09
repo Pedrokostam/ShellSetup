@@ -1,17 +1,62 @@
 from __future__ import annotations
 
-from pathlib import Path
+import os
+import re
 import shlex
 import shutil
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from python import context
-from python.error import AppInstallError
-from python.target_os import AnyOs, is_windows
+from python.error import AppInstallError, InstallScriptError
+from python.target_os import AnyOs
 
 from . import raise_if_none
+
+ENV_FIND = re.compile(
+    r"\$(?!name\b)({(?P<A>\w+)}|(?P<B>\w+))",
+    re.IGNORECASE,
+)
+NAME_FIND = re.compile(
+    r"\$({name}|name)",
+    re.IGNORECASE,
+)
+
+
+def _replace_regex(match: re.Match[str]) -> str:
+    name = match.group("A") or match.group("B")
+    return os.getenv(name, match.group(0))
+
+
+def _normalize_part(s: str) -> str:
+    if "~" in s:
+        s = str(Path(s).expanduser())
+    s = ENV_FIND.sub(_replace_regex, s)
+    return s
+
+
+class CmdParts:
+    def __init__(self, cmd: str | Sequence[str]):
+        if isinstance(cmd, str):
+            self.parts = [
+                _normalize_part(p) for p in shlex.split(cmd, posix=context.is_windows())
+            ]
+        else:
+            self.parts = [_normalize_part(p) for p in cmd]
+
+    def is_dynamic(self):
+        return any(NAME_FIND.match(x) for x in self.parts)
+
+    def substiture_name(self, name: str) -> list[str]:
+        if not self.is_dynamic():
+            return list(self.parts)
+        return [NAME_FIND.sub(name, part) for part in self.parts]
+
+    def __str__(self) -> str:
+        return " ".join(self.parts)
 
 
 def _get_per_system_elevation(node: dict, platform: AnyOs) -> bool | None:
@@ -35,31 +80,29 @@ def _get_per_system_elevation(node: dict, platform: AnyOs) -> bool | None:
     return platform_val
 
 
-def __parts(cmd: str) -> list[str]:
-    return [x.strip() for x in cmd.split(" ") if x.strip()]
-
-
 @dataclass
 class Installer:
     name: str
-    command: str
+    command: CmdParts
     check_name: str
     elevation_required: bool | None = False
-    prepare: str | None = None
+    prepare: CmdParts | None = None
     _available: bool | None = None
 
     @classmethod
     def parse(cls, node: dict):
         _name: str = raise_if_none(node.get("name"), "Installer name")
-        _command: str = raise_if_none(node.get("command"), "Command string")
+        _command: str | Sequence[str] = raise_if_none(
+            node.get("command"), "Command string"
+        )
         _elevated = _get_per_system_elevation(node, context.CURRENT_PLATFORM)
-        _prepare: str | None = node.get("prepare")
+        _prepare: str | Sequence[str] | None = node.get("prepare")
         _check_name: str = node.get("executableToCheck") or _name
         return Installer(
             name=_name,
-            command=_command,
+            command=CmdParts(_command),
             elevation_required=_elevated,
-            prepare=_prepare,
+            prepare=CmdParts(_prepare) if _prepare else None,
             check_name=_check_name,
         )
 
@@ -68,9 +111,14 @@ class Installer:
             self._available = bool(shutil.which(self.check_name))
         return self._available
 
+    def prepare_installer(self) -> bool:
+        if self.prepare == None:
+            return True
+        result = subprocess.run(self.prepare.parts, shell=False, check=False,capture_output=True)
+        return result.returncode == 0
+
     def execute(self, app_name: str) -> str:
-        cmd_parts = shlex.split(self.command, posix=not context.is_windows())
-        ready_cmd = [part.replace("$name", app_name) for part in cmd_parts]
+        ready_cmd = self.command.substiture_name(app_name)
         print(ready_cmd)
         if context.is_windows():
             full_exe_path = context.which(ready_cmd[0])
@@ -130,7 +178,7 @@ class Installer:
 
 @dataclass
 class Command:
-    cmd: str
+    cmd: CmdParts
     elevation_required: bool | None
 
     def is_available(self) -> Literal[True]:
@@ -138,7 +186,7 @@ class Command:
 
     def execute(self):
         result = subprocess.run(
-            self.cmd, shell=True, capture_output=True, text=True, check=False
+            self.cmd.parts, shell=False, capture_output=True, text=True, check=False
         )
         if result.returncode != 0:
             if result.stderr:
