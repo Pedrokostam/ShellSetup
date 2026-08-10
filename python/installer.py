@@ -114,7 +114,9 @@ class Installer:
     def prepare_installer(self) -> bool:
         if self.prepare == None:
             return True
-        result = subprocess.run(self.prepare.parts, shell=False, check=False,capture_output=True)
+        result = subprocess.run(
+            self.prepare.parts, shell=False, check=False, capture_output=True
+        )
         return result.returncode == 0
 
     def execute(self, app_name: str) -> str:
@@ -150,7 +152,11 @@ class Installer:
                     except subprocess.CalledProcessError:
                         raise AppInstallError(problem="Sudo authentication failed")
                 ready_cmd = ["sudo", "-n"] + ready_cmd  # add sudo non-interactive
-        elif self.elevation_required == False and context.IS_ELEVATED:
+        elif (
+            not context.ELEVATION_PROHIBITION_DISABLED
+            and self.elevation_required == False
+            and context.IS_ELEVATED
+        ):
             raise AppInstallError(
                 problem="Installing the app requires non-elevated user"
             )

@@ -48,12 +48,19 @@ if __name__ == "__main__":
     ap.add_argument("--name", "-n", nargs="*", default=[])
     ap.add_argument("--not-group", "-G", nargs="*", default=[])
     ap.add_argument("--not-name", "-N", nargs="*", default=[])
+    ap.add_argument(
+        "--disable-elevation-prohibition",
+        action="store_true",
+        help="Disables checks guarding against running installer with elevation==False when elevated.",
+    )
     args = ap.parse_args()
     if args.plain:
         context.NO_COLOR = True
     if args.test:
         test_parsing(context.APP_JSON_PATH)
         sys.exit(0)
+    if args.disable_elevation_prohibition:
+        context.ELEVATION_PROHIBITION_DISABLED = True
     filters = (
         [Name(x) for x in args.name]
         + [Group(x) for x in args.group]

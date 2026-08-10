@@ -132,7 +132,6 @@ class LazySet(collections.abc.Set):
         if self._thread.is_alive():
             self._thread.join()
 
-    @timed
     def __contains__(self, item):
         self._wait()
         return item in self._data
@@ -148,10 +147,6 @@ class LazySet(collections.abc.Set):
     def refresh(self):
         self._thread.start()
 
-    def __str__(self)->str:
-        return "LazySet"
-
-
 
 
 def __is_elevated() -> bool:
@@ -166,6 +161,7 @@ def __is_elevated() -> bool:
     return False
 
 IS_ELEVATED: bool = __is_elevated()
+ELEVATION_PROHIBITION_DISABLED=False
 SILENT: bool = False
 CURRENT_PLATFORM = detect_platform()
 

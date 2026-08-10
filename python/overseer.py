@@ -201,7 +201,11 @@ class Overseer:
         return [a for a in apps if a]
 
     def _install_app(self, app: AppRequest):
-        if app.instructions.elevation_required() == False and context.IS_ELEVATED:
+        if (
+            not context.ELEVATION_PROHIBITION_DISABLED
+            and app.instructions.elevation_required() == False
+            and context.IS_ELEVATED
+        ):
             self.report.report_fail(app, status=Status.FAILED_ELEVATION_FORBIDDEN)
             return
         try:

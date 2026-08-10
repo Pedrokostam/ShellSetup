@@ -38,7 +38,7 @@ class Status(StrEnum):
         return not self.is_failure() and not self.is_skipped()
 
     def details(self) -> str | None:
-        if self == Status.FAILED_ELEVATION_REQUIRED:
+        if self == Status.FAILED_ELEVATION_FORBIDDEN:
             return "Elevation prohibited"
         if self == Status.FAILED_ELEVATION_REQUIRED:
             return "Requires elevation"
@@ -190,7 +190,8 @@ class Report:
     ):
         if isinstance(details, InstallScriptError):
             details = details.message()
-
+        if details == None or len(details.strip()) == 0:
+            details = None
         details = details or status.details() or ""
 
         al = AppLog(
