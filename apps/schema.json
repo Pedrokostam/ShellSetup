@@ -322,8 +322,8 @@
          "description": "Command to be run to install an app. It must contain the placeholder $name, which will be replaced by the app name.",
          "oneOf": [
             {
-               "type":"string",
-               "pattern": "^\\S.*\\$name(?![A-Za-z0-9_]).*$",
+               "type": "string",
+               "pattern": "^(?=\\S(.*\\S)?$)(?=.*(?:\\$\\{name\\}|\\$name)(?=\\s|$)).+$",
                "description": "Single string command to be run to install an app. It must contain the placeholder $name, which will be replaced by the app name."
             },
             {
@@ -334,7 +334,10 @@
                   "pattern": "^\\S.*\\S"
                },
                "contains": {
-                  "const": "$name"
+                  "enum": [
+                     "$name",
+                     "${name}"
+                  ]
                }
             }
          ]
@@ -343,7 +346,7 @@
          "description": "Static command to be run to install the app. The command is called as-is.",
          "oneOf": [
             {
-               "type":"string",
+               "type": "string",
                "pattern": "^(\\S.*\\S|\\S+)$",
                "description": "Single string command to be run to install an app."
             },

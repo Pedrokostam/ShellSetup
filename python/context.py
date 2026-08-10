@@ -16,17 +16,18 @@ from python.target_os import detect_platform, is_windows
 
 SHELL_SETUP_DIR = Path(__file__).resolve().parent.parent
 
-def report_json_path()->Path:
-    return SHELL_SETUP_DIR / "reports"/ f"report_{strftime('%Y%m%d%H%M%S')}.json"
+
+def report_json_path() -> Path:
+    return SHELL_SETUP_DIR / "reports" / f"report_{strftime('%Y%m%d%H%M%S')}.json"
+
 
 APP_JSON_PATH = SHELL_SETUP_DIR / "apps" / "apps.json"
 
 AUXILIARY_INSTALL_SCRIPT_DIR = SHELL_SETUP_DIR / "apps" / "scripts"
 
-IS_REDIRECTED = not ( sys.stdout.isatty() and sys.stderr.isatty())
+IS_REDIRECTED = not (sys.stdout.isatty() and sys.stderr.isatty())
 
 NO_COLOR = IS_REDIRECTED
-print(NO_COLOR)
 
 
 def run_lines(cmd: list[str]) -> list[str]:
@@ -104,8 +105,8 @@ def windows_existing() -> set[str]:
 
 
 @timed
-def get_apps_from_managers(platform: AnyOs|None=None) -> set[str]:
-    platform=platform or CURRENT_PLATFORM
+def get_apps_from_managers(platform: AnyOs | None = None) -> set[str]:
+    platform = platform or CURRENT_PLATFORM
     if platform == Windows():
         return windows_existing()
     if platform == Arch():
@@ -148,7 +149,6 @@ class LazySet(collections.abc.Set):
         self._thread.start()
 
 
-
 def __is_elevated() -> bool:
     if is_windows():
         import ctypes
@@ -160,8 +160,9 @@ def __is_elevated() -> bool:
     # on linux, this script cannot be run as root
     return False
 
+
 IS_ELEVATED: bool = __is_elevated()
-ELEVATION_PROHIBITION_DISABLED=False
+ELEVATION_PROHIBITION_DISABLED = False
 SILENT: bool = False
 CURRENT_PLATFORM = detect_platform()
 
@@ -222,3 +223,12 @@ def refresh_manager_apps():
     __EXISTING_APPS_MANAGERS.refresh()
 
 
+__PWSH_KEY = "NEWEST_POWERSHELL"
+
+if p7 := which("pwsh"):
+    pwsh_exe = p7
+elif p5 := which("powershell"):
+    pwsh_exe = p5
+else:
+    pwsh_exe = "THERE_IS_NO_POWERSHELL_ON_THIS_SYSTEM"
+os.environ[__PWSH_KEY] = pwsh_exe

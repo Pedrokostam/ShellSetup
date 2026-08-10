@@ -6,19 +6,19 @@
          "installers": [
             {
                "name": "winget",
-               "command": "winget install --id $name --accept-package-agreements -e --scope user -h --source winget",
+               "command": "winget install --id ${name} --accept-package-agreements -e --scope user -h --source winget",
                "elevated": null
             },
             {
                "name": "scoop",
                "prepare": [
-                  "powershell",
+                  "${NEWEST_POWERSHELL}",
                   "-file",
                   "~/scoop/shims/scoop.ps1",
-                  "update"
+                  "-V"
                ],
                "command": [
-                  "powershell",
+                  "${NEWEST_POWERSHELL}",
                   "-file",
                   "~/scoop/shims/scoop.ps1",
                   "install",
@@ -94,8 +94,8 @@
          "group": "package_managers",
          "windows": false,
          "arch": {
-            "elevated": false,
-            "script": "arch_yay_install_script.sh"
+            "script": "arch_yay_install_script.sh",
+            "elevated": true
          }
       },
       {
@@ -152,11 +152,75 @@
          "linux": true
       },
       {
+         "name": "yazi",
+         "group": "cli",
+         "windows": {
+            "name": "sxyazi.yazi"
+         },
+         "arch": true,
+         "debian": {
+            "script": "debian_yazi_install_script.sh",
+            "elevated": true
+         },
+         "fedora": {
+            "script": "fedora_yazi_install_script.sh"
+         }
+      },
+      {
+         "name": "ffmpeg",
+         "group": "utilities",
+         "windows": {
+            "name": "Gyan.FFmpeg"
+         },
+         "any": true
+      },
+      {
+         "name": "poppler",
+         "group": "utilities",
+         "windows": {
+            "name": "oschwartz10612.Poppler"
+         },
+         "any": true
+      },
+      {
+         "name": "fd",
+         "group": "utilities",
+         "windows": {
+            "name": "sharkdp.fd"
+         },
+         "any": true
+      },
+      {
+         "name": "resvg",
+         "group": "utilities",
+         "windows": {
+            "installer": "scoop"
+         },
+         "any": true
+      },
+      {
+         "name": "imagemagick",
+         "checkName": "magick",
+         "group": "utilities",
+         "windows": {
+            "name": "ImageMagick.ImageMagick"
+         },
+         "any": true
+      },
+      {
+         "name": "7zip",
+         "group": "utilities",
+         "windows": {
+            "name": "7zip.7zip"
+         },
+         "any": true
+      },
+      {
          "name": "ripgrep",
          "checkName": "rg",
          "group": "cli",
          "windows": {
-            "installer": "scoop"
+            "name": "BurntSushi.ripgrep"
          },
          "linux": true
       },
@@ -216,17 +280,20 @@
             "name": "Microsoft.PowerShell"
          },
          "debian": {
-            "script": "debian_pwsh_install_script.sh"
+            "script": "debian_pwsh_install_script.sh",
+            "elevated": true
          },
          "arch": {
             "installer": "yay",
             "name": "powershell-bin"
          },
          "opensuse": {
-            "script": "opensuse_pwsh_install_script.sh"
+            "script": "opensuse_pwsh_install_script.sh",
+            "elevated": true
          },
          "fedora": {
-            "script": "fedora_pwsh_install_script.sh"
+            "script": "fedora_pwsh_install_script.sh",
+            "elevated": true
          }
       },
       {

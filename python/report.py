@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 import json
+import os
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from enum import Enum, StrEnum, auto
 from pathlib import Path
@@ -36,6 +37,13 @@ class Status(StrEnum):
 
     def is_installed(self) -> bool:
         return not self.is_failure() and not self.is_skipped()
+
+    def short_form(self) -> str:
+        if self.is_failure():
+            return "X"
+        if self.is_skipped():
+            return "·"
+        return "✓"
 
     def details(self) -> str | None:
         if self == Status.FAILED_ELEVATION_FORBIDDEN:
@@ -93,6 +101,8 @@ class LinePos(Enum):
 
 
 def crop_word(word: str, limit: int) -> str:
+    if len(word) == 1:
+        return word
     if len(word) > (limit - 3):
         return word[: (limit - 3)] + "…"
     return word
@@ -100,7 +110,9 @@ def crop_word(word: str, limit: int) -> str:
 
 def print_cells(cells: Sequence[tuple[str, int]], color: Color | None = None):
     box = "│"
-    contents = [f"{crop_word(w, l):^{l}}" for w, l in cells]
+    contents = [f"{w:^{l}}" for w, l in cells[:-1]] + [
+        f"{w:<{l}}" for w, l in cells[-1:]
+    ]
     if color:
         no_borders = box.join(wrap_color(x, color) for x in contents)
     else:
@@ -112,21 +124,61 @@ def print_cells(cells: Sequence[tuple[str, int]], color: Color | None = None):
 def print_border(typ: LinePos, widths: Sequence[int]):
     fill = "─"
     if typ == LinePos.TOP:
-        left = "┌"
+        left = "╭"
         mid = "┬"
-        right = "┐"
+        right = "╮"
     elif typ == LinePos.BOT:
-        left = "└"
+        left = "╰"
         mid = "┴"
-        right = "┘"
+        right = "╯"
     else:
-        left = "│"
+        left = "├"
         mid = "┼"
-        right = "│"
+        right = "┤"
     parts = [fill * x for x in widths]
     no_borders = mid.join(parts)
     line = f"{left}{no_borders}{right}"
     print(line)
+
+
+def getto(items: Sequence[str], last_limit: int | None):
+    if last_limit == None or last_limit <= 0:
+        return tuple(items[:-1]) + (items[-1],)
+    return tuple(items[:-1]) + (crop_word(items[-1], last_limit),)
+
+
+def oooooooooooooooooookay(app_logs: list[AppLog]):
+    # list of tuples of string
+    initial = [
+        getto(
+            (
+                a.status.short_form(),
+                a.app_pretty_name,
+                a.app_group,
+                remove_newline(" " + a.details),
+            ),
+            None,
+        )
+        for a in app_logs
+    ]
+    for i in initial:
+        sum(len(x) for x in i)
+
+    no_of_cells = len(initial[0])
+    # each column has 2 additional spaces as padding, except for the last, which has one
+    # the border are 1-char wide and there is 1 more border than colums.
+    formatting_padding = (no_of_cells - 1) * 2 + 1 + (no_of_cells + 1) * 1
+
+    lengths = [tuple(len(x) for x in t[:-1]) for t in initial]
+    non_details_width = sum([max(zi) for zi in zip(*lengths)])
+    print(lengths)
+    print(non_details_width)
+    space_for_details = (
+        os.get_terminal_size().columns - non_details_width - formatting_padding
+    )
+    print(formatting_padding, non_details_width)
+
+    return [getto(x, space_for_details) for x in initial]
 
 
 def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
@@ -138,18 +190,11 @@ def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
         return
     als = sorted(als, key=lambda x: (x.app_group, x.app_pretty_name))
 
-    headers = ["App name", "Group", "Details"]
+    headers = [" ", "App name", "Group", "Details"]
     header_limits = tuple(map(len, headers))
-    details_limit = 75
 
-    strings = [
-        (
-            a.app_pretty_name,
-            a.app_group,
-            crop_word(remove_newline(a.details), details_limit),
-        )
-        for a in als
-    ]
+    strings = oooooooooooooooooookay(als)
+
     raw_widths = [tuple(len(x) for x in s) for s in strings]
     widths = tuple(
         max(max(x, limit) for x in col) + 2
@@ -172,7 +217,6 @@ def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
             cells,
             color,
         )
-        # print(f"│{'─'*(name_width+2)}┼{'─'*(group_width+2)}┼{'─'*(details_width+2)}│")
 
     print_border(LinePos.BOT, widths)
 
