@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 from python import context
+from python.color import wrap_color,Color
 from python.error import AppInstallError, InstallScriptError
 from python.target_os import AnyOs
 
@@ -114,10 +115,18 @@ class Installer:
     def prepare_installer(self) -> bool:
         if self.prepare == None:
             return True
+        if not context.SILENT:
+            print(f"Preparing {self.name}... ",end='')
         result = subprocess.run(
             self.prepare.parts, shell=False, check=False, capture_output=True
         )
         context.report_prepared(self.name)
+        if not context.SILENT:
+            if result.returncode==0:
+                sc = wrap_color("SUCCESS",Color.GREEN)
+            else:
+                sc = wrap_color("FAIL",Color.RED)
+            print(sc)
         return result.returncode == 0
 
     def execute(self, app_name: str) -> str:
@@ -125,6 +134,8 @@ class Installer:
             self.prepare_installer()
 
         ready_cmd = self.command.substiture_name(app_name)
+        if not context.SILENT:
+            print(f"Installing {app_name} with {self.name}... ")
         if DEBUG:
             print(ready_cmd)
         if context.is_windows():

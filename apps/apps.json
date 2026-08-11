@@ -64,6 +64,12 @@
                "prepare": "pacman -Syq",
                "command": "pacman -Sq --needed --noconfirm $name",
                "elevated": true
+            },
+            {
+               "name": "yay",
+               "prepare": "yay -Syq",
+               "command": "yay -Sq --needed --noconfirm $name",
+               "elevated": true
             }
          ]
       },

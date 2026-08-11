@@ -208,8 +208,8 @@ class Overseer:
             self.report.report_fail(app, status=Status.FAILED_ELEVATION_FORBIDDEN)
             return
         try:
-            # output = app.instructions.execute()
-            output = "mock"
+            output = app.instructions.execute()
+            # output = "mock"
             self.report.report_success(app, output)
         except AppInstallError as a:
             self.report.report_fail(app=app, details=a, status=Status.FAILED)
