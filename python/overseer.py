@@ -86,7 +86,7 @@ class Overseer:
         installer_key: str | None = node.get("installer")
         script_key: str | None = node.get("script")
         elevated_key: bool | None = node.get("elevated")
-        command_key: str | Sequence[str] | None = node.get("command")
+        command_key: str | None = node.get("command")
         package_name: str = node.get("name") or app.app_name
         # if the node has only name for the app, treat it as using the default installer
         if package_name and not installer_key:
@@ -95,7 +95,7 @@ class Overseer:
         if command_key:
             return InstallInstruction(
                 installer=Command(
-                    cmd=CmdParts(command_key), elevation_required=elevated_key
+                    cmd=command_key, elevation_required=elevated_key
                 ),
                 package_name=package_name,
             )

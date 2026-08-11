@@ -198,7 +198,7 @@ class Installer:
 
 @dataclass
 class Command:
-    cmd: CmdParts
+    cmd: str
     elevation_required: bool | None
 
     def is_available(self) -> Literal[True]:
@@ -206,7 +206,7 @@ class Command:
 
     def execute(self):
         result = subprocess.run(
-            self.cmd.parts, shell=False, capture_output=True, text=True, check=False
+            self.cmd, shell=True, capture_output=True, text=True, check=False
         )
         if result.returncode != 0:
             if result.stderr:
@@ -225,7 +225,9 @@ class Script:
         return True
 
     def execute(self) -> str:
-        abs_path = context.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path
+        abs_path = (context.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path).resolve()
+        if not abs_path.exists():
+            raise AppInstallError(problem=f"script file {self.script_path} not found")
         result = subprocess.run(
             str(abs_path.resolve()),
             shell=True,
