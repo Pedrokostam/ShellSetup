@@ -10,10 +10,6 @@ import threading
 from pathlib import Path
 from time import strftime
 
-from python import timed
-from python.installer import Installer
-from python.target_os import *
-from python.target_os import detect_platform, is_windows
 
 SHELL_SETUP_DIR = Path(__file__).resolve().parent.parent
 
@@ -29,6 +25,13 @@ AUXILIARY_INSTALL_SCRIPT_DIR = SHELL_SETUP_DIR / "apps" / "scripts"
 IS_REDIRECTED = not (sys.stdout.isatty() and sys.stderr.isatty())
 
 NO_COLOR = IS_REDIRECTED
+ELEVATION_PROHIBITION_DISABLED = False
+SILENT: bool = False
+
+from python import timed
+from python.installer import Installer
+from python.target_os import *
+from python.target_os import detect_platform, is_windows
 
 
 def run_lines(cmd: list[str]) -> list[str]:
@@ -163,9 +166,14 @@ def __is_elevated() -> bool:
 
 
 IS_ELEVATED: bool = __is_elevated()
-ELEVATION_PROHIBITION_DISABLED = False
-SILENT: bool = True
 CURRENT_PLATFORM = detect_platform()
+
+
+def conditional_print(msg: str, *args, **kwargs):
+    if SILENT:
+        return
+    print(msg, *args, **kwargs, flush=True)
+
 
 __EXISTING_APPS_CALLABLE: dict[str, str | None] = {}
 __EXISTING_APPS_MANAGERS = LazySet(get_apps_from_managers)

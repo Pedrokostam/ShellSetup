@@ -365,7 +365,7 @@
       {
          "name": "npmy_____asfd",
          "group": "test",
-         "windows": {
+         "any": {
             "installer": "npm"
          }
       },

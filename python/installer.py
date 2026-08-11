@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import wraps
+import inspect
 import os
 import re
 import shlex
@@ -8,6 +10,7 @@ import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from time import sleep
 from typing import Literal
 
 from python import context
@@ -25,6 +28,42 @@ NAME_FIND = re.compile(
     r"\$({name}|name)",
     re.IGNORECASE,
 )
+
+
+def one_line_report(
+    initial_msg: str,
+    ok: str = wrap_color("SUCCESS", Color.GREEN),
+    nok: str = wrap_color("FAIL", Color.RED),
+):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            sig = inspect.signature(func)
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            arguments = dict(bound.arguments)
+            name_arg = next(x for x in arguments if "name" in x)
+            if name_arg:
+                name_value = str(arguments[name_arg])
+            else:
+                name_value = "N/A"
+            if hasattr(arguments.get("self"), "name"):
+                selfname = arguments["self"].name
+            else:
+                selfname = "N/A"
+            msg = initial_msg.format(selfname=selfname, name=name_value)
+            context.conditional_print(msg, end="")
+            try:
+                r = func(*args, **kwargs)
+                context.conditional_print(ok)
+                return r
+            except:
+                context.conditional_print(nok)
+                raise
+
+        return wrapper
+
+    return decorator
 
 
 def _replace_regex(match: re.Match[str]) -> str:
@@ -115,9 +154,11 @@ class Installer:
             self._available = bool(shutil.which(self.check_name))
         return self._available
 
+    @one_line_report(initial_msg="Preparing installer {selfname}...")
     def prepare_installer(self) -> bool:
         if self.prepare == None:
             return True
+        context.conditional_print(f"Preparing {self.name}... ", end="")
         if not context.SILENT:
             print(f"Preparing {self.name}... ", end="")
         result = subprocess.run(
@@ -132,15 +173,11 @@ class Installer:
             print(sc)
         return result.returncode == 0
 
+    @one_line_report(initial_msg="Installing {name} with {selfname}...")
     def execute(self, app_name: str) -> str:
         if self.prepare and not context.is_prepared(self.name):
             self.prepare_installer()
-
         ready_cmd = self.command.substiture_name(app_name)
-        if not context.SILENT:
-            print(f"Installing {app_name} with {self.name}... ")
-        if DEBUG:
-            print(ready_cmd)
         if context.is_windows():
             full_exe_path = context.which(ready_cmd[0])
             if not full_exe_path:
