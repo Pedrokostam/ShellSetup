@@ -4,13 +4,14 @@ import json
 import os
 import shutil
 import subprocess
-import tempfile
 import sys
+import tempfile
 import threading
 from pathlib import Path
 from time import strftime
 
 from python import timed
+from python.installer import Installer
 from python.target_os import *
 from python.target_os import detect_platform, is_windows
 
@@ -232,3 +233,18 @@ elif p5 := which("powershell"):
 else:
     pwsh_exe = "THERE_IS_NO_POWERSHELL_ON_THIS_SYSTEM"
 os.environ[__PWSH_KEY] = pwsh_exe
+
+
+__PREPARED_INSTALLERS: set[str] = set()
+
+
+def is_prepared(installer: str | Installer) -> bool:
+    if isinstance(installer, Installer):
+        installer = installer.name
+    return installer.casefold() in __PREPARED_INSTALLERS
+
+
+def report_prepared(installer: str | Installer):
+    if isinstance(installer, Installer):
+        installer = installer.name
+    __PREPARED_INSTALLERS.add(installer.casefold())

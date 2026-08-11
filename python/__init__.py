@@ -36,6 +36,9 @@ def raise_if_none(val: T | None, name: str = "Value") -> T:
     return val
 
 
+DEBUG = False
+
+
 def timed(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -44,12 +47,13 @@ def timed(func):
         try:
             return func(*args, **kwargs)
         finally:
-            duration = perf_counter() - start
-            bound = sig.bind(*args, **kwargs)
-            bound.apply_defaults()
-            arguments = dict(bound.arguments)
-            arguments.pop("self", None)
-            arguments.pop("cls", None)
-            print(func.__name__, arguments, f" => {duration:.3f}s")
+            if DEBUG:
+                duration = perf_counter() - start
+                bound = sig.bind(*args, **kwargs)
+                bound.apply_defaults()
+                arguments = dict(bound.arguments)
+                arguments.pop("self", None)
+                arguments.pop("cls", None)
+                print(func.__name__, arguments, f" => {duration:.3f}s")
 
     return wrapper

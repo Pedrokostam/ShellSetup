@@ -14,7 +14,7 @@ from python import context
 from python.error import AppInstallError, InstallScriptError
 from python.target_os import AnyOs
 
-from . import raise_if_none
+from . import DEBUG, raise_if_none
 
 ENV_FIND = re.compile(
     r"\$(?!name\b)({(?P<A>\w+)}|(?P<B>\w+))",
@@ -117,11 +117,16 @@ class Installer:
         result = subprocess.run(
             self.prepare.parts, shell=False, check=False, capture_output=True
         )
+        context.report_prepared(self.name)
         return result.returncode == 0
 
     def execute(self, app_name: str) -> str:
+        if self.prepare and not context.is_prepared(self.name):
+            self.prepare_installer()
+
         ready_cmd = self.command.substiture_name(app_name)
-        print(ready_cmd)
+        if DEBUG:
+            print(ready_cmd)
         if context.is_windows():
             full_exe_path = context.which(ready_cmd[0])
             if not full_exe_path:
@@ -161,7 +166,6 @@ class Installer:
                 problem="Installing the app requires non-elevated user"
             )
 
-        print(*ready_cmd)
         result = subprocess.run(
             ready_cmd,
             shell=False,
@@ -169,7 +173,6 @@ class Installer:
             text=True,
             check=False,
         )
-        print(f"exit code:{result.returncode}")
         if result.returncode != 0:
             err_msg = (
                 result.stderr.strip()

@@ -171,19 +171,14 @@ def oooooooooooooooooookay(app_logs: list[AppLog]):
 
     lengths = [tuple(len(x) for x in t[:-1]) for t in initial]
     non_details_width = sum([max(zi) for zi in zip(*lengths)])
-    print(lengths)
-    print(non_details_width)
     space_for_details = (
         os.get_terminal_size().columns - non_details_width - formatting_padding
     )
-    print(formatting_padding, non_details_width)
-
     return [getto(x, space_for_details) for x in initial]
 
 
 def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
     complex_filter = ComplexFilter.coerce(complex_filter)
-    print(complex_filter.names)
     als = [a for a in als if complex_filter.filter(a.app)]
     if not als:
         print("No apps to list")

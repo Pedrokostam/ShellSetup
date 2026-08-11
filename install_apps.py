@@ -15,7 +15,16 @@ from unittest.mock import patch
 
 # importing ./python.__init__.py automatically checks the python version and elevation status
 from python import context
-from python.filters import ComplexFilter, Filters, Group, Name, NotGroup, NotName
+from python.filters import (
+    ComplexFilter,
+    Filters,
+    GroupFilter,
+    InstallerFilter,
+    NameFilter,
+    NotGroupFilter,
+    NotInstallerFilter,
+    NotNameFilter,
+)
 from python.overseer import Overseer
 from python.target_os import CONCRETE_OS
 
@@ -46,8 +55,10 @@ if __name__ == "__main__":
     ap.add_argument("--test", action="store_true")
     ap.add_argument("--group", "-g", nargs="*", default=[])
     ap.add_argument("--name", "-n", nargs="*", default=[])
+    ap.add_argument("--installer", "-i", nargs="*", default=[])
     ap.add_argument("--not-group", "-G", nargs="*", default=[])
     ap.add_argument("--not-name", "-N", nargs="*", default=[])
+    ap.add_argument("--not-installer", "-I", nargs="*", default=[])
     ap.add_argument(
         "--disable-elevation-prohibition",
         action="store_true",
@@ -62,9 +73,11 @@ if __name__ == "__main__":
     if args.disable_elevation_prohibition:
         context.ELEVATION_PROHIBITION_DISABLED = True
     filters = (
-        [Name(x) for x in args.name]
-        + [Group(x) for x in args.group]
-        + [NotName(x) for x in args.not_name]
-        + [NotGroup(x) for x in args.not_group]
+        [NameFilter(x) for x in args.name]
+        + [GroupFilter(x) for x in args.group]
+        + [InstallerFilter(x) for x in args.installer]
+        + [NotNameFilter(x) for x in args.not_name]
+        + [NotGroupFilter(x) for x in args.not_group]
+        + [NotInstallerFilter(x) for x in args.not_installer]
     )
     install(filters=filters)

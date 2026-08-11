@@ -15,31 +15,56 @@ class _Filter:
         return f"{type(self).__name__}: {self.value}"
 
 
-class Group(_Filter):
+class GroupFilter(_Filter):
     pass
 
 
-class Name(_Filter):
+class NameFilter(_Filter):
     pass
 
 
-class NotGroup(_Filter):
+class NotGroupFilter(_Filter):
     pass
 
 
-class NotName(_Filter):
+class NotNameFilter(_Filter):
     pass
 
 
-Filters: TypeAlias = Sequence[Name | Group | NotName | NotGroup]
+class InstallerFilter(_Filter):
+    pass
+
+
+class NotInstallerFilter(_Filter):
+    pass
+
+
+Filters: TypeAlias = Sequence[
+    NameFilter
+    | GroupFilter
+    | InstallerFilter
+    | NotNameFilter
+    | NotGroupFilter
+    | NotInstallerFilter
+]
 
 
 class ComplexFilter:
     def __init__(self, filters: Filters):
-        self.names = {str(x) for x in filters if isinstance(x, Name)}
-        self.groups = {str(x) for x in filters if isinstance(x, Group)}
-        self.not_names = {str(x) for x in filters if isinstance(x, NotName)}
-        self.not_groups = {str(x) for x in filters if isinstance(x, NotGroup)}
+        self.names = {str(x).casefold() for x in filters if isinstance(x, NameFilter)}
+        self.groups = {str(x).casefold() for x in filters if isinstance(x, GroupFilter)}
+        self.installers = {
+            str(x).casefold() for x in filters if isinstance(x, InstallerFilter)
+        }
+        self.not_names = {
+            str(x).casefold() for x in filters if isinstance(x, NotNameFilter)
+        }
+        self.not_groups = {
+            str(x).casefold() for x in filters if isinstance(x, NotGroupFilter)
+        }
+        self.not_installers = {
+            str(x).casefold() for x in filters if isinstance(x, NotInstallerFilter)
+        }
 
     @classmethod
     def coerce(cls, f: "Filters|ComplexFilter|None") -> "ComplexFilter":
@@ -50,10 +75,19 @@ class ComplexFilter:
         return ComplexFilter([])
 
     def filter(self, app: AppRequest | AppRequestStem) -> bool:
-        if self.names and app.app_name not in self.names:
+        if self.names and app.app_name.casefold() not in self.names:
             return False
-        if self.groups and app.group_name not in self.groups:
+        if self.groups and app.group_name.casefold() not in self.groups:
             return False
-        if self.not_names and app.app_name in self.not_names:
+        if self.not_names and app.app_name.casefold() in self.not_names:
             return False
-        return not (self.not_groups and app.group_name in self.not_groups)
+        if self.not_groups and app.group_name.casefold() in self.not_groups:
+            return False
+        inst_name = (
+            app.instructions.installer_name().casefold()
+            if isinstance(app, AppRequest)
+            else None
+        )
+        if self.installers and inst_name not in self.installers:
+            return False
+        return not (self.not_installers and inst_name in self.not_installers)
