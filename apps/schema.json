@@ -237,6 +237,7 @@
          "oneOf": [
             {
                "type": "boolean",
+               "default": true,
                "description": "Whether to use the default installer with name of containing node. A missing platform is treated as false."
             },
             {
@@ -261,6 +262,13 @@
                   },
                   "elevated": {
                      "$ref": "#/definitions/elevation"
+                  },
+                  "dependencies": {
+                     "type": "array",
+                     "description": "Dependencies that must be installed for the app to run.",
+                     "items": {
+                        "$ref": "#/definitions/identifier"
+                     }
                   }
                },
                "dependencies": {
@@ -296,6 +304,22 @@
                            {
                               "required": [
                                  "installer"
+                              ]
+                           }
+                        ]
+                     }
+                  },
+                  "dependencies": {
+                     "not": {
+                        "anyOf": [
+                           {
+                              "required": [
+                                 "command"
+                              ]
+                           },
+                           {
+                              "required": [
+                                 "script"
                               ]
                            }
                         ]

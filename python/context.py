@@ -164,7 +164,7 @@ def __is_elevated() -> bool:
 
 IS_ELEVATED: bool = __is_elevated()
 ELEVATION_PROHIBITION_DISABLED = False
-SILENT: bool = False
+SILENT: bool = True
 CURRENT_PLATFORM = detect_platform()
 
 __EXISTING_APPS_CALLABLE: dict[str, str | None] = {}

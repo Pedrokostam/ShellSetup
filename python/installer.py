@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 from python import context
-from python.color import wrap_color,Color
+from python.color import wrap_color, Color
 from python.error import AppInstallError, InstallScriptError
 from python.target_os import AnyOs
 
@@ -88,6 +88,7 @@ class Installer:
     check_name: str
     elevation_required: bool | None = False
     prepare: CmdParts | None = None
+    dependencies: list[str] | None = None
     _available: bool | None = None
 
     @classmethod
@@ -98,6 +99,7 @@ class Installer:
         )
         _elevated = _get_per_system_elevation(node, context.CURRENT_PLATFORM)
         _prepare: str | Sequence[str] | None = node.get("prepare")
+        _deps: list[str] | None = node.get("dependencies")
         _check_name: str = node.get("executableToCheck") or _name
         return Installer(
             name=_name,
@@ -105,6 +107,7 @@ class Installer:
             elevation_required=_elevated,
             prepare=CmdParts(_prepare) if _prepare else None,
             check_name=_check_name,
+            dependencies=_deps,
         )
 
     def is_available(self):
@@ -116,16 +119,16 @@ class Installer:
         if self.prepare == None:
             return True
         if not context.SILENT:
-            print(f"Preparing {self.name}... ",end='')
+            print(f"Preparing {self.name}... ", end="")
         result = subprocess.run(
             self.prepare.parts, shell=False, check=False, capture_output=True
         )
         context.report_prepared(self.name)
         if not context.SILENT:
-            if result.returncode==0:
-                sc = wrap_color("SUCCESS",Color.GREEN)
+            if result.returncode == 0:
+                sc = wrap_color("SUCCESS", Color.GREEN)
             else:
-                sc = wrap_color("FAIL",Color.RED)
+                sc = wrap_color("FAIL", Color.RED)
             print(sc)
         return result.returncode == 0
 
