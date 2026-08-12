@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from enum import Enum
 
 from python import context
+from python.context import flags
 
 
 class Color(Enum):
@@ -32,7 +33,7 @@ class Color(Enum):
 
     def __str__(self):
         """Allows direct usage in f-strings without typing '.value'."""
-        if context.NO_COLOR:
+        if flags.NO_COLOR:
             return ""
         return self.value
 

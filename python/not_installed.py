@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from python.installer import Installer
+from python.installation import Installer
 
 from .app_request import AppRequest
 from .color import Color, wrap_color

@@ -1,66 +1,27 @@
 from __future__ import annotations
 
-import inspect
-import os
-import re
-import shlex
 import shutil
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
-from functools import wraps
-from pathlib import Path
-from typing import Literal
+from typing import Literal, TypeVar
 
-from python import context
+# from python import context
+from python import printing, target_os
+from python.cmd_parts import CmdParts
 from python.color import Color, wrap_color
+from python.context import flags, paths, system
 from python.error import AppInstallError
+from python.printing import one_line_report
 from python.target_os import AnyOs
 
-from . import raise_if_none
-
-ENV_FIND = re.compile(
-    r"\$(?!name\b)({(?P<A>\w+)}|(?P<B>\w+))",
-    re.IGNORECASE,
-)
-NAME_FIND = re.compile(
-    r"\$({name}|name)",
-    re.IGNORECASE,
-)
+T = TypeVar("T")
 
 
-
-def _replace_regex(match: re.Match[str]) -> str:
-    name = match.group("A") or match.group("B")
-    return os.getenv(name, match.group(0))
-
-
-def _normalize_part(s: str) -> str:
-    if "~" in s:
-        s = str(Path(s).expanduser())
-    s = ENV_FIND.sub(_replace_regex, s)
-    return s
-
-
-class CmdParts:
-    def __init__(self, cmd: str | Sequence[str]):
-        if isinstance(cmd, str):
-            self.parts = [
-                _normalize_part(p) for p in shlex.split(cmd, posix=context.is_windows())
-            ]
-        else:
-            self.parts = [_normalize_part(p) for p in cmd]
-
-    def is_dynamic(self):
-        return any(NAME_FIND.match(x) for x in self.parts)
-
-    def substiture_name(self, name: str) -> list[str]:
-        if not self.is_dynamic():
-            return list(self.parts)
-        return [NAME_FIND.sub(name, part) for part in self.parts]
-
-    def __str__(self) -> str:
-        return " ".join(self.parts)
+def _raise_if_none(val: T | None, name: str = "Value") -> T:
+    if val is None:
+        raise ValueError(f"{name} missing")
+    return val
 
 
 def _get_per_system_elevation(node: dict, platform: AnyOs) -> bool | None:
@@ -96,11 +57,11 @@ class Installer:
 
     @classmethod
     def parse(cls, node: dict):
-        _name: str = raise_if_none(node.get("name"), "Installer name")
-        _command: str | Sequence[str] = raise_if_none(
+        _name: str = _raise_if_none(node.get("name"), "Installer name")
+        _command: str | Sequence[str] = _raise_if_none(
             node.get("command"), "Command string"
         )
-        _elevated = _get_per_system_elevation(node, context.CURRENT_PLATFORM)
+        _elevated = _get_per_system_elevation(node, target_os.CURRENT_PLATFORM)
         _prepare: str | Sequence[str] | None = node.get("prepare")
         _deps: list[str] | None = node.get("dependencies")
         _check_name: str = node.get("executableToCheck") or _name
@@ -118,18 +79,21 @@ class Installer:
             self._available = bool(shutil.which(self.check_name))
         return self._available
 
+    def is_prepared(self):
+        return is_installer_prepared(self.name)
+
     @one_line_report(initial_msg="Preparing installer {self.name} - {self.prepare}...")
     def prepare_installer(self) -> bool:
         if self.prepare == None:
             return True
-        context.conditional_print(f"Preparing {self.name}... ", end="")
-        if not context.SILENT:
+        printing.conditional_print(f"Preparing {self.name}... ", end="")
+        if not flags.SILENT:
             print(f"Preparing {self.name}... ", end="")
         result = subprocess.run(
             self.prepare.parts, shell=False, check=False, capture_output=True
         )
-        context.report_prepared(self.name)
-        if not context.SILENT:
+        report_installer_prepared(self.name)
+        if not flags.SILENT:
             if result.returncode == 0:
                 sc = wrap_color("SUCCESS", Color.GREEN)
             else:
@@ -139,11 +103,14 @@ class Installer:
 
     @one_line_report(initial_msg="Installing {app_name} with {self.name}...")
     def execute(self, app_name: str) -> str:
-        if self.prepare and not context.is_prepared(self.name):
+        elevation_required = flags.get_elevation_setting(
+            self.name, self.elevation_required
+        )
+        if self.prepare and not self.is_prepared():
             self.prepare_installer()
         ready_cmd = self.command.substiture_name(app_name)
-        if context.is_windows():
-            full_exe_path = context.which(ready_cmd[0])
+        if target_os.is_windows():
+            full_exe_path = system.which(ready_cmd[0])
             if not full_exe_path:
                 raise AppInstallError(problem=f"installer {self.name} is not in PATH")
             # extension = Path(full_exe_path).suffix.lower()
@@ -151,8 +118,8 @@ class Installer:
             #     ready_cmd = ["cmd.exe", "/c"] + ready_cmd+[]
             # else:
             ready_cmd[0] = full_exe_path
-        if self.elevation_required and not context.IS_ELEVATED:
-            if context.is_windows():
+        if elevation_required and not system.IS_ELEVATED:
+            if target_os.is_windows():
                 # look like its too complicate to bother
                 raise AppInstallError(
                     problem="Cannot elevate a Windows installer. Rerun the script with elevation.",
@@ -172,11 +139,7 @@ class Installer:
                     except subprocess.CalledProcessError:
                         raise AppInstallError(problem="Sudo authentication failed")
                 ready_cmd = ["sudo", "-n"] + ready_cmd  # add sudo non-interactive
-        elif (
-            not context.ELEVATION_PROHIBITION_DISABLED
-            and self.elevation_required == False
-            and context.IS_ELEVATED
-        ):
+        elif elevation_required == False and system.IS_ELEVATED:
             raise AppInstallError(
                 problem="Installing the app requires non-elevated user"
             )
@@ -232,7 +195,7 @@ class Script:
         return True
 
     def execute(self) -> str:
-        abs_path = (context.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path).resolve()
+        abs_path = (paths.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path).resolve()
         if not abs_path.exists():
             raise AppInstallError(problem=f"script file {self.script_path} not found")
         result = subprocess.run(
@@ -273,3 +236,20 @@ class InstallInstruction:
         if isinstance(self.installer, Installer):
             return self.installer.execute(app_name=self.package_name)
         return self.installer.execute()
+
+
+__PREPARED_INSTALLERS: set[str] = set()
+
+
+def is_installer_prepared(installer: str | Installer) -> bool:
+
+    if isinstance(installer, Installer):
+        installer = installer.name
+    return installer.casefold() in __PREPARED_INSTALLERS
+
+
+def report_installer_prepared(installer: str | Installer):
+
+    if isinstance(installer, Installer):
+        installer = installer.name
+    __PREPARED_INSTALLERS.add(installer.casefold())

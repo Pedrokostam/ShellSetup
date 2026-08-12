@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
+from python.context.system import is_windows
 
-def is_windows() -> bool:
-    return os.name == "nt"
+__all__ =['AnyOs', 'Arch', 'Debian', 'Fedora', 'Linux', 'OpenSuse', 'Ubuntu', 'Windows']
 
 class AnyOs:
     def __str__(self) -> str:
@@ -98,7 +97,7 @@ def get_system_from_string(s: str) -> AnyOs | None:
     return None
 
 
-def parse_os_release() -> dict[str, str]:
+def __parse_os_release() -> dict[str, str]:
     data: dict[str, str] = {}
     p = Path("/etc/os-release")
     if not p.exists():
@@ -112,10 +111,10 @@ def parse_os_release() -> dict[str, str]:
     return data
 
 
-def detect_platform() -> AnyOs:
+def __detect_platform() -> AnyOs:
     if is_windows():
         return Windows()
-    osrel = parse_os_release()
+    osrel = __parse_os_release()
     ident = f"{osrel.get('ID', '')} {osrel.get('ID_LIKE', '')}".lower()
     if "ubuntu" in ident:
         return Ubuntu()
@@ -129,3 +128,5 @@ def detect_platform() -> AnyOs:
     if "suse" in ident:
         return OpenSuse()
     raise OSError(f"Unrecognized Linux OS: {osrel.get('ID', '?')}")
+
+CURRENT_PLATFORM = __detect_platform()

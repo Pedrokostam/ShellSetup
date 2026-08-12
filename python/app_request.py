@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from python.error import AppInstallError
 
-from .installer import InstallInstruction, Installer
+from .installation import Installer, InstallInstruction
 
 DEFAULT_GROUP = "core"
 

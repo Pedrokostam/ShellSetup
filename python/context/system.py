@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections.abc
 import concurrent.futures
 import json
@@ -9,6 +11,22 @@ import threading
 from pathlib import Path
 
 from python.printing import timed
+
+
+def is_windows() -> bool:
+    return os.name == "nt"
+
+
+def __is_elevated() -> bool:
+    if is_windows():
+        import ctypes
+
+        try:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        except OSError:
+            return False
+    # on linux, this script cannot be run as root
+    return False
 
 
 # Mutable caches, populated in a background thread and at runtime.
@@ -140,9 +158,7 @@ __EXISTING_APPS_MANAGERS = LazySet(get_apps_from_managers)
 
 
 def refresh_PATH():
-    from python import target_os
-
-    if target_os.is_windows():
+    if is_windows():
         import winreg
 
         # Read System PATH
@@ -189,3 +205,15 @@ def is_app_installed(app: str) -> bool:
 
 def refresh_manager_apps():
     __EXISTING_APPS_MANAGERS.refresh()
+
+
+IS_ELEVATED: bool = __is_elevated()
+__PWSH_KEY = "NEWEST_POWERSHELL"
+if p7 := which("pwsh"):
+    pwsh_exe = p7
+elif p5 := which("powershell"):
+    pwsh_exe = p5
+else:
+    pwsh_exe = "THERE_IS_NO_POWERSHELL_ON_THIS_SYSTEM"
+os.environ[__PWSH_KEY] = pwsh_exe
+

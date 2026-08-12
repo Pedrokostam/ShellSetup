@@ -14,7 +14,7 @@ from pprint import pprint
 from unittest.mock import patch
 
 # importing ./python.__init__.py automatically checks the python version and elevation status
-from python import context
+from python.context import flags, paths
 from python.filters import (
     ComplexFilter,
     Filters,
@@ -43,7 +43,7 @@ def test_parsing(json_path: Path):
 
 
 def install(filters: Filters | ComplexFilter | None):
-    overseer = Overseer.create_context(context.APP_JSON_PATH, filters)
+    overseer = Overseer.create_context(paths.APP_JSON_PATH, filters)
     overseer.install()
     overseer.print_report()
 
@@ -66,12 +66,12 @@ if __name__ == "__main__":
     )
     args = ap.parse_args()
     if args.plain:
-        context.NO_COLOR = True
+        flags.NO_COLOR = True
     if args.test:
-        test_parsing(context.APP_JSON_PATH)
+        test_parsing(paths.APP_JSON_PATH)
         sys.exit(0)
     if args.disable_elevation_prohibition:
-        context.ELEVATION_PROHIBITION_DISABLED = True
+        flags.override_elevation_setting("*", None)
     filters = (
         [NameFilter(x) for x in args.name]
         + [GroupFilter(x) for x in args.group]

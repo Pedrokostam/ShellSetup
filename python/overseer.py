@@ -1,21 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from python import context, timed
+from python import target_os
 from python.app_request import AppRequest, AppRequestStem
+from python.context import paths, system
 from python.error import (
     AppInstallError,
     InstallScriptError,
     JsonSyntaxError,
 )
 from python.filters import ComplexFilter, Filters
+from python.installation import Command, Installer, InstallInstruction, Script
+from python.printing import timed
 
-from .installer import CmdParts, Command, Installer, InstallInstruction, Script
 from .report import Report, Status
 from .target_os import *
 
@@ -47,7 +48,7 @@ class Overseer:
         json_data = json.loads(apps_json.read_text(encoding="utf-8"))
         defaults = json_data["defaults"]
 
-        _platform = detect_platform()
+        _platform = target_os.CURRENT_PLATFORM
         _generic_platforms = _platform.get_more_generic_installers()
 
         current_defaults = defaults[str(_platform)]
@@ -123,7 +124,7 @@ class Overseer:
         raise JsonSyntaxError(problem="app node contains too little information")
 
     def _test_app_installed(self, app: AppRequest) -> bool:
-        if app.check_name and any(context.is_app_installed(x) for x in app.check_name):
+        if app.check_name and any(system.is_app_installed(x) for x in app.check_name):
             self.report.report_preinstall(app)
             return False
         return True
@@ -166,8 +167,8 @@ class Overseer:
             self.report.report_skip(ars, status=Status.SKIPPED_CHOICE)
             return None
 
-        matching_key = context.CURRENT_PLATFORM.find_most_concrete_system(
-            [get_system_from_string(k) for k in node if k != "name"]
+        matching_key = target_os.CURRENT_PLATFORM.find_most_concrete_system(
+            [target_os.get_system_from_string(k) for k in node if k != "name"]
         )
 
         if matching_key == None:
@@ -204,13 +205,6 @@ class Overseer:
         return [a for a in apps if a]
 
     def _install_app(self, app: AppRequest):
-        if (
-            not context.ELEVATION_PROHIBITION_DISABLED
-            and app.instructions.elevation_required() == False
-            and context.IS_ELEVATED
-        ):
-            self.report.report_fail(app, status=Status.FAILED_ELEVATION_FORBIDDEN)
-            return
         try:
             output = app.instructions.execute()
             # output = "mock"
@@ -229,7 +223,7 @@ class Overseer:
         for app in apps_to_install:
             self._install_app(app)
 
-        self.report.save_report(context.report_json_path())
+        self.report.save_report(paths.report_json_path())
 
     @timed
     def print_report(self):
