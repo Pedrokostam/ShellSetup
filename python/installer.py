@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import wraps
 import inspect
 import os
 import re
@@ -9,16 +8,16 @@ import shutil
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
+from functools import wraps
 from pathlib import Path
-from time import sleep
 from typing import Literal
 
 from python import context
-from python.color import wrap_color, Color
-from python.error import AppInstallError, InstallScriptError
+from python.color import Color, wrap_color
+from python.error import AppInstallError
 from python.target_os import AnyOs
 
-from . import DEBUG, raise_if_none
+from . import raise_if_none
 
 ENV_FIND = re.compile(
     r"\$(?!name\b)({(?P<A>\w+)}|(?P<B>\w+))",
@@ -29,41 +28,6 @@ NAME_FIND = re.compile(
     re.IGNORECASE,
 )
 
-
-def one_line_report(
-    initial_msg: str,
-    ok: str = wrap_color("SUCCESS", Color.GREEN),
-    nok: str = wrap_color("FAIL", Color.RED),
-):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            sig = inspect.signature(func)
-            bound = sig.bind(*args, **kwargs)
-            bound.apply_defaults()
-            arguments = dict(bound.arguments)
-            name_arg = next(x for x in arguments if "name" in x)
-            if name_arg:
-                name_value = str(arguments[name_arg])
-            else:
-                name_value = "N/A"
-            if hasattr(arguments.get("self"), "name"):
-                selfname = arguments["self"].name
-            else:
-                selfname = "N/A"
-            msg = initial_msg.format(selfname=selfname, name=name_value)
-            context.conditional_print(msg, end="")
-            try:
-                r = func(*args, **kwargs)
-                context.conditional_print(ok)
-                return r
-            except:
-                context.conditional_print(nok)
-                raise
-
-        return wrapper
-
-    return decorator
 
 
 def _replace_regex(match: re.Match[str]) -> str:
@@ -154,7 +118,7 @@ class Installer:
             self._available = bool(shutil.which(self.check_name))
         return self._available
 
-    @one_line_report(initial_msg="Preparing installer {selfname}...")
+    @one_line_report(initial_msg="Preparing installer {self.name} - {self.prepare}...")
     def prepare_installer(self) -> bool:
         if self.prepare == None:
             return True
@@ -173,7 +137,7 @@ class Installer:
             print(sc)
         return result.returncode == 0
 
-    @one_line_report(initial_msg="Installing {name} with {selfname}...")
+    @one_line_report(initial_msg="Installing {app_name} with {self.name}...")
     def execute(self, app_name: str) -> str:
         if self.prepare and not context.is_prepared(self.name):
             self.prepare_installer()
@@ -239,11 +203,13 @@ class Installer:
 @dataclass
 class Command:
     cmd: str
+    app_name: str
     elevation_required: bool | None
 
     def is_available(self) -> Literal[True]:
         return True
 
+    @one_line_report(initial_msg="Installing {self.app_name} with a custom command...")
     def execute(self):
         result = subprocess.run(
             self.cmd, shell=True, capture_output=True, text=True, check=False
@@ -259,6 +225,7 @@ class Command:
 @dataclass
 class Script:
     script_path: str
+    app_name: str
     elevation_required: bool | None
 
     def is_available(self) -> Literal[True]:

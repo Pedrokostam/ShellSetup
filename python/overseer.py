@@ -95,7 +95,9 @@ class Overseer:
         if command_key:
             return InstallInstruction(
                 installer=Command(
-                    cmd=command_key, elevation_required=elevated_key
+                    cmd=command_key,
+                    elevation_required=elevated_key,
+                    app_name=app.app_name,
                 ),
                 package_name=package_name,
             )
@@ -103,7 +105,9 @@ class Overseer:
         if script_key:
             return InstallInstruction(
                 installer=Script(
-                    script_path=script_key, elevation_required=elevated_key
+                    script_path=script_key,
+                    elevation_required=elevated_key,
+                    app_name=app.app_name,
                 ),
                 package_name=package_name,
             )
