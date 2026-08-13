@@ -3,7 +3,9 @@ from __future__ import annotations
 import inspect
 import re
 from functools import wraps
+from string import Formatter
 from time import perf_counter
+from typing import Any
 
 
 def timed(func):
@@ -32,6 +34,12 @@ PLACEHOLDER_FIND = re.compile(
     r"{([\w\.\, \(\)]+)}",
 )
 
+__NORMALIZER = re.compile(r"[\(\)\.:]")
+
+
+def __normalize_name(s: str) -> str:
+    return __NORMALIZER.sub(s, "_")
+
 
 def __get_root(s: str) -> str:
     parts = s.split(".")
@@ -39,14 +47,39 @@ def __get_root(s: str) -> str:
     return main
 
 
-def __get_atrs(expr: str, val_dict: dict):
+def __get_atrs(expr: str, root_val: Any):
     root = __get_root(expr)
-    root_val = val_dict[root]
     expr_dict = {}
     expr_dict[root] = root_val
 
     res = eval(expr, {}, expr_dict)
     return res
+
+
+def __rebuild_format(format_string: str, val_dict: dict):
+    parts = []
+    for literal, field, format_specifier, conversion in Formatter().parse(
+        format_string
+    ):
+        parts.append(literal)
+        if field:
+            root_name = __get_root(field)
+            if root_name not in val_dict:
+                parts.append(f"[ERROR: MISSING KEY {field}]")
+                continue
+            value = __get_atrs(field, val_dict[root_name])
+
+            subparts = []
+            if format_specifier:
+                subparts.append(":" + format_specifier)
+            if conversion:
+                subparts.append("!" + conversion)
+            if subparts:
+                final_format = ("{" + "".join(subparts) + "}").format(value)
+                parts.append(final_format)
+            else:
+                parts.append(str(value))
+    return "".join(parts)
 
 
 def one_line_report(
@@ -66,17 +99,20 @@ def one_line_report(
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
             arguments = dict(bound.arguments)
-            placeholders = PLACEHOLDER_FIND.findall(initial_msg)
-            formatting_values = [__get_atrs(p, arguments) for p in placeholders]
-            msg = initial_msg.format(*formatting_values)
+            msg = __rebuild_format(initial_msg, arguments)
             conditional_print(msg, end="")
+            start = perf_counter()
             try:
                 r = func(*args, **kwargs)
-                conditional_print(ok_msg)
+                function_passed = True
                 return r
             except:
-                conditional_print(nok_msg)
+                function_passed=False
                 raise
+            finally:
+                end = perf_counter()
+                status_message = ok_msg if function_passed else nok_msg
+                conditional_print(f"{status_message} [{end - start:.3f}s]")
 
         return wrapper
 

@@ -212,7 +212,9 @@ class Overseer:
         except AppInstallError as a:
             self.report.report_fail(app=app, details=a, status=Status.FAILED)
         except Exception as e:  # noqa: BLE001
-            self.report.report_fail(app=app, details=str(e), status=Status.FAILED)
+            self.report.report_fail(
+                app=app, details=f"Exception {type(e).__qualname__} - {e}", status=Status.FAILED
+            )
 
     @timed
     def install(self):

@@ -82,7 +82,7 @@ class Installer:
     def is_prepared(self):
         return is_installer_prepared(self.name)
 
-    @one_line_report(initial_msg="Preparing installer {self.name} - {self.prepare}...")
+    @one_line_report(initial_msg="Preparing installer {self.name} - {self.prepare}… ")
     def prepare_installer(self) -> bool:
         if self.prepare == None:
             return True
@@ -101,7 +101,7 @@ class Installer:
             print(sc)
         return result.returncode == 0
 
-    @one_line_report(initial_msg="Installing {app_name} with {self.name}...")
+    @one_line_report(initial_msg="Installing {app_name} with {self.name}… ")
     def execute(self, app_name: str) -> str:
         elevation_required = flags.get_elevation_setting(
             self.name, self.elevation_required
@@ -172,7 +172,7 @@ class Command:
     def is_available(self) -> Literal[True]:
         return True
 
-    @one_line_report(initial_msg="Installing {self.app_name} with a custom command...")
+    @one_line_report(initial_msg="Installing {self.app_name} with a custom command… ")
     def execute(self):
         result = subprocess.run(
             self.cmd, shell=True, capture_output=True, text=True, check=False
@@ -194,6 +194,7 @@ class Script:
     def is_available(self) -> Literal[True]:
         return True
 
+    @one_line_report(initial_msg="Installing {self.app_name} with script {self.script_path}… ")
     def execute(self) -> str:
         abs_path = (paths.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path).resolve()
         if not abs_path.exists():
