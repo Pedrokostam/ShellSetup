@@ -4,6 +4,7 @@ import shutil
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
+from time import sleep
 from typing import Literal, TypeVar
 
 # from python import context
@@ -22,6 +23,17 @@ def _raise_if_none(val: T | None, name: str = "Value") -> T:
     if val is None:
         raise ValueError(f"{name} missing")
     return val
+
+
+def debug_skip() -> str | None:
+    import random
+
+    if not flags.is_debug(flags.DEBUG_MOCK_INSTALL):
+        return None
+    sleep(0.5 + random.random())
+    if random.random() > 0.4:
+        return "Randomly passed"
+    raise AppInstallError(problem="Randomly failed")
 
 
 def _get_per_system_elevation(node: dict, platform: AnyOs) -> bool | None:
@@ -82,8 +94,12 @@ class Installer:
     def is_prepared(self):
         return is_installer_prepared(self.name)
 
-    @one_line_report(initial_msg="Preparing installer {self.name} - {self.prepare}… ")
+    @one_line_report(
+        initial_msg="Preparing installer {self.name;YELLOW} - {self.prepare}… "
+    )
     def prepare_installer(self) -> bool:
+        if a := debug_skip():
+            return bool(a)
         if self.prepare == None:
             return True
         printing.conditional_print(f"Preparing {self.name}... ", end="")
@@ -101,8 +117,11 @@ class Installer:
             print(sc)
         return result.returncode == 0
 
-    @one_line_report(initial_msg="Installing {app_name} with {self.name}… ")
+    @one_line_report(initial_msg="Installing {app_name;MAGENTA} with {self.name}… ")
     def execute(self, app_name: str) -> str:
+        if a := debug_skip():
+            return a
+
         elevation_required = flags.get_elevation_setting(
             self.name, self.elevation_required
         )
@@ -172,8 +191,12 @@ class Command:
     def is_available(self) -> Literal[True]:
         return True
 
-    @one_line_report(initial_msg="Installing {self.app_name} with a custom command… ")
-    def execute(self):
+    @one_line_report(
+        initial_msg="Installing {self.app_name;MAGENTA} with custom command… "
+    )
+    def execute(self) -> str:
+        if a := debug_skip():
+            return a
         result = subprocess.run(
             self.cmd, shell=True, capture_output=True, text=True, check=False
         )
@@ -194,8 +217,12 @@ class Script:
     def is_available(self) -> Literal[True]:
         return True
 
-    @one_line_report(initial_msg="Installing {self.app_name} with script {self.script_path}… ")
+    @one_line_report(
+        initial_msg="Installing {self.app_name;MAGENTA} with script {self.script_path;YELLOW}… "
+    )
     def execute(self) -> str:
+        if a := debug_skip():
+            return a
         abs_path = (paths.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path).resolve()
         if not abs_path.exists():
             raise AppInstallError(problem=f"script file {self.script_path} not found")

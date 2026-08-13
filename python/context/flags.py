@@ -1,7 +1,22 @@
 import sys
+from collections.abc import Sequence
 
 SILENT = False
-DEBUG = False
+__DEBUG = []
+
+DEBUG_TIME='time'
+DEBUG_MOCK_INSTALL='install'
+
+def set_debug(key: str | Sequence[str]):
+    if isinstance(key, str):
+        __DEBUG.append(key.lower())
+    else:
+        __DEBUG.extend(x.lower() for x in key)
+
+
+def is_debug(key: str):
+    return key in __DEBUG or "*" in __DEBUG
+
 
 __IS_REDIRECTED = not (sys.stdout.isatty() and sys.stderr.isatty())
 NO_COLOR = __IS_REDIRECTED

@@ -14,6 +14,7 @@ from pprint import pprint
 from unittest.mock import patch
 
 # importing ./python.__init__.py automatically checks the python version and elevation status
+from python.color import Color
 from python.context import flags, paths
 from python.filters import (
     ComplexFilter,
@@ -59,6 +60,7 @@ if __name__ == "__main__":
     ap.add_argument("--not-group", "-G", nargs="*", default=[])
     ap.add_argument("--not-name", "-N", nargs="*", default=[])
     ap.add_argument("--not-installer", "-I", nargs="*", default=[])
+    ap.add_argument("--debug", nargs="*", default=[])
     ap.add_argument(
         "--disable-elevation-prohibition",
         action="store_true",
@@ -67,6 +69,8 @@ if __name__ == "__main__":
     args = ap.parse_args()
     if args.plain:
         flags.NO_COLOR = True
+    if args.debug:
+        flags.set_debug(args.debug)
     if args.test:
         test_parsing(paths.APP_JSON_PATH)
         sys.exit(0)

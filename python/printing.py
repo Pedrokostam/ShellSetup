@@ -7,6 +7,8 @@ from string import Formatter
 from time import perf_counter
 from typing import Any
 
+from python.color import wrap_color
+
 
 def timed(func):
     @wraps(func)
@@ -18,7 +20,7 @@ def timed(func):
         try:
             return func(*args, **kwargs)
         finally:
-            if flags.DEBUG:
+            if flags.is_debug(flags.DEBUG_TIME):
                 duration = perf_counter() - start
                 bound = sig.bind(*args, **kwargs)
                 bound.apply_defaults()
@@ -57,12 +59,20 @@ def __get_atrs(expr: str, root_val: Any):
 
 
 def __rebuild_format(format_string: str, val_dict: dict):
+    from python.color import Color
+
     parts = []
     for literal, field, format_specifier, conversion in Formatter().parse(
         format_string
     ):
         parts.append(literal)
         if field:
+            field_col = field.split(";")
+            field = field_col[0]
+            color = field_col[1] if len(field_col) > 1 else None
+            if color:
+                color = Color.__members__.get(color.upper())
+
             root_name = __get_root(field)
             if root_name not in val_dict:
                 parts.append(f"[ERROR: MISSING KEY {field}]")
@@ -75,10 +85,12 @@ def __rebuild_format(format_string: str, val_dict: dict):
             if conversion:
                 subparts.append("!" + conversion)
             if subparts:
-                final_format = ("{" + "".join(subparts) + "}").format(value)
-                parts.append(final_format)
+                final_final_value = ("{" + "".join(subparts) + "}").format(value)
             else:
-                parts.append(str(value))
+                final_final_value = str(value)
+            if color:
+                final_final_value = color.wrap(value)
+            parts.append(final_final_value)
     return "".join(parts)
 
 
@@ -107,7 +119,7 @@ def one_line_report(
                 function_passed = True
                 return r
             except:
-                function_passed=False
+                function_passed = False
                 raise
             finally:
                 end = perf_counter()

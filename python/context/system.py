@@ -10,6 +10,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+import python
 from python.printing import timed
 
 
@@ -198,6 +199,10 @@ def which(app: str, refresh: bool = False) -> str | None:
 
 
 def is_app_installed(app: str) -> bool:
+    from python.context import flags
+
+    if flags.is_debug(flags.DEBUG_MOCK_INSTALL):
+        return False
     if which(app):
         return True
     return app in __EXISTING_APPS_MANAGERS
@@ -216,4 +221,3 @@ elif p5 := which("powershell"):
 else:
     pwsh_exe = "THERE_IS_NO_POWERSHELL_ON_THIS_SYSTEM"
 os.environ[__PWSH_KEY] = pwsh_exe
-

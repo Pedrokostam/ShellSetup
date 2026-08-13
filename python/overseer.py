@@ -7,7 +7,7 @@ from pathlib import Path
 
 from python import target_os
 from python.app_request import AppRequest, AppRequestStem
-from python.context import paths, system
+from python.context import flags, paths, system
 from python.error import (
     AppInstallError,
     InstallScriptError,
@@ -207,13 +207,14 @@ class Overseer:
     def _install_app(self, app: AppRequest):
         try:
             output = app.instructions.execute()
-            # output = "mock"
             self.report.report_success(app, output)
         except AppInstallError as a:
             self.report.report_fail(app=app, details=a, status=Status.FAILED)
         except Exception as e:  # noqa: BLE001
             self.report.report_fail(
-                app=app, details=f"Exception {type(e).__qualname__} - {e}", status=Status.FAILED
+                app=app,
+                details=f"Exception {type(e).__qualname__} - {e}",
+                status=Status.FAILED,
             )
 
     @timed
