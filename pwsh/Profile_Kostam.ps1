@@ -1,7 +1,19 @@
-oh-my-posh init pwsh --config "$PSScriptRoot/../oh-my-posh/kostamfive.omp.json" | Invoke-Expression
+if (Get-Command oh-my-posh)
+{
+   oh-my-posh init pwsh --config "$PSScriptRoot/../oh-my-posh/kostamfive.omp.json" | Invoke-Expression
+}
 $global:IdleEventCounter = 0
-$global:EventCommands = @(
-   (& { (zoxide init powershell | Out-String) })
+if (Get-Command zoxide)
+{
+   $global:EventCommands = @(
+      (& { (zoxide init powershell | Out-String) })
+   )
+}
+else
+{
+   $global:EventCommands = @()
+}
+$global:EventCommands = $global:EventCommands + @(
    'Set-PSReadLineKeyHandler -Chord tab -Function MenuComplete'
    'Import-Module -Name Terminal-Icons -Global'
    'Import-Module -Name Posh -Global'

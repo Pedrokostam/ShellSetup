@@ -14,7 +14,13 @@ from python.error import (
     JsonSyntaxError,
 )
 from python.filters import ComplexFilter, Filters
-from python.installation import Command, Installer, InstallInstruction, Script
+from python.installation import (
+    Command,
+    Installer,
+    InstallInstruction,
+    Script,
+    cache_sudo,
+)
 from python.printing import timed
 
 from .report import Report, Status
@@ -220,11 +226,19 @@ class Overseer:
     @timed
     def install(self):
         app_requests = self._parse_requests()
-
-        to_prepare = list({x.instructions.instruction_name():x.instructions for x in app_requests if x.instructions.preparable()}.values())
+        needs_sudo = any(x.instructions.elevation_required for x in app_requests)
+        if needs_sudo:
+            cache_sudo()
+        to_prepare = list(
+            {
+                x.instructions.instruction_name(): x.instructions
+                for x in app_requests
+                if x.instructions.preparable()
+            }.values()
+        )
 
         for prep_inst in to_prepare:
-            res = prep_inst.prepare()
+            prep_inst.prepare()
 
         apps_to_install = [a for a in app_requests if self.app_filter.filter(a)]
 

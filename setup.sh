@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-echo "Elevation will be required at some points of the installation process."
-echo "The script will attempt to run a sudo command to cache credentials."
-sudo echo "Password cached"
+# echo "Elevation will be required at some points of the installation process."
+# echo "The script will attempt to run a sudo command to cache credentials."
+# sudo echo "Password cached"
 
 if [ "$(id -u)" -eq 0 ] && [ "$FORCE" != true ]; then
-    echo "Error: This script cannot be run as root. Use -f to override." >&2
+    echo "Error: This script must not be run as root." >&2
     exit 1
 fi
 
@@ -30,5 +30,3 @@ if ! command -v python3 &> /dev/null || ! python3 -c 'import sys; sys.exit(0 if 
 fi
 
 python3 "$SCRIPT_DIR/setup.py"
-
-exec "$SHELL"

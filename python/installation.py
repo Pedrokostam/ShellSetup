@@ -28,14 +28,25 @@ def _raise_if_none(val: T | None, name: str = "Value") -> T:
         raise ValueError(f"{name} missing")
     return val
 
-def cache_sudo():
+
+def is_sudo_cached() -> bool:
+    return (
+        subprocess.run(["sudo", "-Nnv"], capture_output=True, check=False).returncode
+        == 0
+    )
+
+
+def cache_sudo(caller: str | None = None):
     if system.is_windows():
         return
-
+    if is_sudo_cached():
+        return
     sudo_cached_result = subprocess.run(
         ["sudo", "-Nnv"], capture_output=True, check=False
     )
     if sudo_cached_result.returncode != 0:
+        if caller:
+            print(f"{Color.YELLOW.wrap(caller)} requires sudo")
         try:
             subprocess.run(["sudo", "-v"], check=True)  # sudo validate
         except subprocess.CalledProcessError:
@@ -163,14 +174,8 @@ class Installer:
                     problem="Cannot elevate a Windows installer. Rerun the script with elevation.",
                 )
             else:
-                sudo_cached_result = subprocess.run(
-                    ["sudo", "-Nnv"], capture_output=True, check=False
-                )
-                if sudo_cached_result.returncode != 0:
-                    try:
-                        subprocess.run(["sudo", "-v"], check=True)  # sudo validate
-                    except subprocess.CalledProcessError:
-                        raise AppInstallError(problem="Sudo authentication failed")
+                if not is_sudo_cached():
+                    raise AppInstallError(problem="Sudo authentication failed")
                 ready_cmd = ["sudo", "-n"] + ready_cmd  # add sudo non-interactive
         elif elevation_required == False and system.IS_ELEVATED:
             raise AppInstallError(
@@ -285,6 +290,8 @@ class InstallInstruction:
 
     def execute(self):
         if isinstance(self.installer, Installer):
+            if self.installer.elevation_required == True:
+                cache_sudo(self.installer.name)
             return self.installer.execute(app_name=self.package_name)
         return self.installer.execute()
 
@@ -295,6 +302,8 @@ class InstallInstruction:
 
     def prepare(self) -> bool:
         if isinstance(self.installer, Installer):
+            if self.installer.elevation_required == True:
+                cache_sudo(self.installer.name)
             return self.installer.prepare_installer()
         return True
 

@@ -12,19 +12,19 @@ import subprocess
 import sys
 from pathlib import Path
 
-from python import context
+from install_apps import install
 from python.color import Color, wrap_color
-from python.context import SHELL_SETUP_DIR
+from python.context import paths, system
+from python.context.system import is_windows, which
+from python.filters import NameFilter
 
 
 def pwsh_exe() -> str | None:
-    return context.which("pwsh") or (
-        context.which("powershell") if context.is_windows() else None
-    )
+    return which("pwsh") or (which("powershell") if is_windows() else None)
 
 
 def run(
-    cmd, capture: bool = False, shell: bool = False
+    cmd, capture: bool = True, shell: bool = False
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         cmd, capture_output=capture, text=True, shell=shell, check=False
@@ -53,13 +53,13 @@ def append_once(file: Path, line: str, marker: str | None = None) -> bool:
 
 
 def setup_git() -> None:
-    if not context.which("git"):
+    if not which("git"):
         print("Git is not installed! Aliases will not be added!", file=sys.stderr)
         return
-    custom_config_path = str((SHELL_SETUP_DIR / "git" / "myconfig.gitconfig").resolve())
-    output = run(
-        ["git", "config", "--global", "--get-all", "include.path"], capture=True
+    custom_config_path = str(
+        (paths.SHELL_SETUP_DIR / "git" / "myconfig.gitconfig").resolve()
     )
+    output = run(["git", "config", "--global", "--get-all", "include.path"])
     existing = [
         os.path.normcase(os.path.normpath(e.strip()))
         for e in output.stdout.splitlines()
@@ -76,7 +76,7 @@ def setup_git() -> None:
 
 def setup_font() -> None:
     font = "FantasqueSansMono"
-    if context.is_windows():
+    if is_windows():
         ps = pwsh_exe()
         out = run(
             [
@@ -97,26 +97,34 @@ def setup_font() -> None:
     if found:
         print(wrap_color("Font is already installed", Color.CYAN))
         return
-    if not context.which("oh-my-posh"):
+    if not which("oh-my-posh"):
         print("Cannot install font (oh-my-posh missing)", file=sys.stderr)
         return
     print("Installing font...")
     run(["oh-my-posh", "font", "install", font])
 
 
+def setup_omp():
+    if not which("oh-my-posh"):
+        print("Cannot setup oh-my-posh (missing)", file=sys.stderr)
+        return
+
+
 def setup_pwsh_modules(no_modules: bool) -> None:
     if no_modules:
         return
-    pwsh = context.which("pwsh")
+    pwsh = which("pwsh")
     if not pwsh:
         print("pwsh not available; skipping module installation.", file=sys.stderr)
         return
-    script_path = str((SHELL_SETUP_DIR / "pwsh" / "Install-Modules.ps1").resolve())
+    script_path = str(
+        (paths.SHELL_SETUP_DIR / "pwsh" / "Install-Modules.ps1").resolve()
+    )
     run([pwsh, "-NoProfile", "-File", script_path])
 
 
 def add_to_powershell_profile(powershell_exe: str):
-    pwsh = context.which(powershell_exe)
+    pwsh = which(powershell_exe)
     if not pwsh:
         print(
             f"{powershell_exe} not available; skipping {powershell_exe} profile setup.",
@@ -126,14 +134,16 @@ def add_to_powershell_profile(powershell_exe: str):
     profile_path = run(
         [pwsh, "-NoProfile", "-Command", "$PROFILE"], capture=True
     ).stdout.strip()
-    custom = (SHELL_SETUP_DIR / "pwsh" / "Profile_Kostam.ps1").resolve()
+    custom = (paths.SHELL_SETUP_DIR / "pwsh" / "Profile_Kostam.ps1").resolve()
     append_once(Path(profile_path), f". '{custom}'", marker="Profile_Kostam.ps1")
 
 
 def setup_profiles() -> None:
     home = Path.home()
-    if not context.is_windows():
-        bashrc_path = SHELL_SETUP_DIR / "bash" / "bashrc_kostam.sh"
+    # bash and fish are not on windows
+    # or rather they maybe can be there, but you should prefer to use them via WSL
+    if not system.is_windows():
+        bashrc_path = paths.SHELL_SETUP_DIR / "bash" / "bashrc_kostam.sh"
         if bashrc_path.exists():
             append_once(
                 home / ".bashrc",
@@ -142,17 +152,17 @@ def setup_profiles() -> None:
 
         local_bin_path = home / ".local" / "bin"
         append_once(home / ".profile", f'export PATH="$PATH:{local_bin_path}"')
-        profile_path = SHELL_SETUP_DIR / "bash" / "profile_kostam.sh"
+        profile_path = paths.SHELL_SETUP_DIR / "bash" / "profile_kostam.sh"
         if profile_path.exists():
             append_once(home / ".profile", f'source "{profile_path}"')
 
-        if context.which("fish"):
+        if which("fish"):
             append_once(
                 home / ".config" / "fish" / "config.fish",
-                f'source "{SHELL_SETUP_DIR / "fish" / "profile_kostam.fish"}"',
+                f'source "{paths.SHELL_SETUP_DIR / "fish" / "profile_kostam.fish"}"',
             )
 
-    if context.is_windows():
+    if system.is_windows():
         add_to_powershell_profile("powershell")
     add_to_powershell_profile("pwsh")
 
@@ -166,16 +176,19 @@ def main() -> None:
         "--no-modules", action="store_true", help="skip pwsh module installation"
     )
     args = ap.parse_args()
-    git_exists = context.which("git")
-    omp_exists = context.which("oh-my-posh")
-    fish_exists = context.which("fish")
-
+    first_batch = ["git", "pwsh", "oh-my-posh", "fish"]
+    first_batch = [x for x in first_batch if not which(x)]
+    if first_batch:
+        install(filters=[NameFilter(x) for x in first_batch])
+        print("\nRefreshing environment")
+        system.refresh_PATH()
+        system.refresh_manager_apps()
+        print()
     setup_git()
-    setup_oh_my_posh()
-    setup_font()
-    setup_pwsh_modules(args.no_modules)
     setup_profiles()
-    install_apps(args.yes)
+    setup_pwsh_modules(args.no_modules)
+    setup_font()
+    install()
 
 
 if __name__ == "__main__":

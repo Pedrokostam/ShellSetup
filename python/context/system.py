@@ -127,8 +127,9 @@ def get_apps_from_managers() -> set[str]:
 class LazySet(collections.abc.Set):
     def __init__(self, target_function):
         self._data: set[str] = set()
+        self._target_function = target_function
         self._thread = threading.Thread(
-            target=self._populate, args=(target_function,), daemon=True
+            target=self._populate, args=(self._target_function,), daemon=True
         )
         self._thread.start()
 
@@ -152,6 +153,10 @@ class LazySet(collections.abc.Set):
         return len(self._data)
 
     def refresh(self):
+        self._data.clear()
+        self._thread = threading.Thread(
+            target=self._populate, args=(self._target_function,), daemon=True
+        )
         self._thread.start()
 
 
@@ -177,11 +182,14 @@ def refresh_PATH():
                 user_path = ""
         os.environ["PATH"] = f"{system_path};{user_path}"
     else:
+        old_path = os.environ["PATH"].split(":")
         shell = os.environ.get("SHELL", "/bin/bash")
-        new_path = subprocess.check_output(
-            [shell, "-lc", "echo $PATH"], text=True
-        ).strip()
-        os.environ["PATH"] = new_path
+        new_path = (
+            subprocess.check_output([shell, "-c", "echo $PATH"], text=True)
+            .strip()
+            .split(":")
+        )
+        os.environ["PATH"] = ":".join(old_path + new_path)
     none_keys = [k for k, v in __EXISTING_APPS_CALLABLE.items() if v == None]
     for key in none_keys:
         del __EXISTING_APPS_CALLABLE[key]
@@ -190,9 +198,8 @@ def refresh_PATH():
 def which(app: str, refresh: bool = False) -> str | None:
     if refresh:
         refresh_PATH()
-    dict_val = __EXISTING_APPS_CALLABLE.get(app, -13)
-    if not isinstance(dict_val, int):
-        return dict_val
+    if app in __EXISTING_APPS_CALLABLE:
+        return __EXISTING_APPS_CALLABLE[app]
     new_val = shutil.which(app)
     __EXISTING_APPS_CALLABLE[app] = new_val
     return new_val

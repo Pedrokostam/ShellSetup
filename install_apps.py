@@ -43,10 +43,11 @@ def test_parsing(json_path: Path):
             pprint(ctx)
 
 
-def install(filters: Filters | ComplexFilter | None):
+def install(filters: Filters | ComplexFilter | None = None, no_report: bool = False):
     overseer = Overseer.create_context(paths.APP_JSON_PATH, filters)
     overseer.install()
-    overseer.print_report()
+    if not no_report:
+        overseer.print_report()
 
 
 if __name__ == "__main__":
