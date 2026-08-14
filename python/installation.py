@@ -21,8 +21,25 @@ T = TypeVar("T")
 
 def _raise_if_none(val: T | None, name: str = "Value") -> T:
     if val is None:
+        # exe = ready_cmd[0]
+        # args = ", ".join(f'"{x}"' for x in ready_cmd[1:])
+        # ps_cmd = f'Start-Process "{exe}" -Verb RunAs -Wait -ArgumentList {args}'
+        # ready_cmd = ["powershell","-NoProfile", "-Command", ps_cmd]
         raise ValueError(f"{name} missing")
     return val
+
+def cache_sudo():
+    if system.is_windows():
+        return
+
+    sudo_cached_result = subprocess.run(
+        ["sudo", "-Nnv"], capture_output=True, check=False
+    )
+    if sudo_cached_result.returncode != 0:
+        try:
+            subprocess.run(["sudo", "-v"], check=True)  # sudo validate
+        except subprocess.CalledProcessError:
+            raise AppInstallError(problem="Sudo authentication failed")
 
 
 def debug_skip() -> str | None:
@@ -94,39 +111,41 @@ class Installer:
     def is_prepared(self):
         return is_installer_prepared(self.name)
 
-    @one_line_report(
-        initial_msg="Preparing installer {self.name;YELLOW} - {self.prepare}… "
-    )
+    @one_line_report(initial_msg="Preparing {self.name;YELLOW} - {self.prepare}… ")
     def prepare_installer(self) -> bool:
+        if self.prepare == None:
+            report_installer_prepared(self)
+            return True
+        is_prepped = is_installer_prepared(self)
+        if is_prepped != None:
+            return is_prepped
+
         if a := debug_skip():
             return bool(a)
-        if self.prepare == None:
-            return True
+
         printing.conditional_print(f"Preparing {self.name}... ", end="")
         if not flags.SILENT:
             print(f"Preparing {self.name}... ", end="")
         result = subprocess.run(
             self.prepare.parts, shell=False, check=False, capture_output=True
         )
-        report_installer_prepared(self.name)
-        if not flags.SILENT:
-            if result.returncode == 0:
-                sc = wrap_color("SUCCESS", Color.GREEN)
-            else:
-                sc = wrap_color("FAIL", Color.RED)
-            print(sc)
-        return result.returncode == 0
+        success = result.returncode == 0
+        report_installer(self, success)
+        return success
 
     @one_line_report(initial_msg="Installing {app_name;MAGENTA} with {self.name}… ")
     def execute(self, app_name: str) -> str:
         if a := debug_skip():
             return a
-
         elevation_required = flags.get_elevation_setting(
             self.name, self.elevation_required
         )
-        if self.prepare and not self.is_prepared():
+        if is_installer_prepared(self) == None:
             self.prepare_installer()
+        if is_installer_prepared(self) == False:
+            raise AppInstallError(
+                problem=f"Installer {self.name} could not be prepared"
+            )
         ready_cmd = self.command.substiture_name(app_name)
         if target_os.is_windows():
             full_exe_path = system.which(ready_cmd[0])
@@ -143,11 +162,6 @@ class Installer:
                 raise AppInstallError(
                     problem="Cannot elevate a Windows installer. Rerun the script with elevation.",
                 )
-
-                # exe = ready_cmd[0]
-                # args = ", ".join(f'"{x}"' for x in ready_cmd[1:])
-                # ps_cmd = f'Start-Process "{exe}" -Verb RunAs -Wait -ArgumentList {args}'
-                # ready_cmd = ["powershell","-NoProfile", "-Command", ps_cmd]
             else:
                 sudo_cached_result = subprocess.run(
                     ["sudo", "-Nnv"], capture_output=True, check=False
@@ -246,6 +260,15 @@ class InstallInstruction:
     package_name: str
     installer: Installer | Command | Script
 
+    def instruction_name(self) -> str:
+        match self.installer:
+            case Installer():
+                return self.installer.name
+            case Command():
+                return self.installer.cmd
+            case Script():
+                return self.installer.script_path
+
     def installer_name(self) -> str:
         if isinstance(self.installer, Installer):
             return self.installer.name
@@ -265,19 +288,39 @@ class InstallInstruction:
             return self.installer.execute(app_name=self.package_name)
         return self.installer.execute()
 
+    def preparable(self) -> bool:
+        if isinstance(self.installer, Installer):
+            return bool(self.installer.prepare)
+        return False
 
-__PREPARED_INSTALLERS: set[str] = set()
+    def prepare(self) -> bool:
+        if isinstance(self.installer, Installer):
+            return self.installer.prepare_installer()
+        return True
 
 
-def is_installer_prepared(installer: str | Installer) -> bool:
+__PREPARED_INSTALLERS: dict[str, bool] = {}
 
+
+def is_installer_prepared(installer: str | Installer) -> bool | None:
     if isinstance(installer, Installer):
         installer = installer.name
-    return installer.casefold() in __PREPARED_INSTALLERS
+    return __PREPARED_INSTALLERS.get(installer.casefold())
 
 
 def report_installer_prepared(installer: str | Installer):
-
     if isinstance(installer, Installer):
         installer = installer.name
-    __PREPARED_INSTALLERS.add(installer.casefold())
+    __PREPARED_INSTALLERS[installer.casefold()] = True
+
+
+def report_installer_not_prepared(installer: str | Installer):
+    if isinstance(installer, Installer):
+        installer = installer.name
+    __PREPARED_INSTALLERS[installer.casefold()] = False
+
+
+def report_installer(installer: str | Installer, status: bool):
+    if isinstance(installer, Installer):
+        installer = installer.name
+    __PREPARED_INSTALLERS[installer.casefold()] = status

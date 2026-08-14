@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import inspect
 import re
 from functools import wraps
@@ -94,6 +95,14 @@ def __rebuild_format(format_string: str, val_dict: dict):
     return "".join(parts)
 
 
+class Lock:
+    def __init__(self):
+        self.locked = False
+
+
+__LOCK = Lock()
+
+
 def one_line_report(
     initial_msg: str,
     ok: str | None = None,
@@ -105,6 +114,9 @@ def one_line_report(
             from python.color import Color
             from python.printing import conditional_print
 
+            if __LOCK.locked:
+                return func(*args, **kwargs)
+            __LOCK.locked = True
             ok_msg = ok or Color.GREEN.wrap("SUCCESS")
             nok_msg = nok or Color.RED.wrap("FAILURE")
             sig = inspect.signature(func)
@@ -125,6 +137,7 @@ def one_line_report(
                 end = perf_counter()
                 status_message = ok_msg if function_passed else nok_msg
                 conditional_print(f"{status_message} [{end - start:.3f}s]")
+                __LOCK.locked = False
 
         return wrapper
 

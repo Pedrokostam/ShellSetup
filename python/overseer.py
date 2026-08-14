@@ -221,6 +221,11 @@ class Overseer:
     def install(self):
         app_requests = self._parse_requests()
 
+        to_prepare = list({x.instructions.instruction_name():x.instructions for x in app_requests if x.instructions.preparable()}.values())
+
+        for prep_inst in to_prepare:
+            res = prep_inst.prepare()
+
         apps_to_install = [a for a in app_requests if self.app_filter.filter(a)]
 
         for app in apps_to_install:
