@@ -32,8 +32,8 @@
       "debian": {
          "installers": [
             {
-               "name": "apt",
-               "command": "apt install $name -y",
+               "name": "apt-get",
+               "command": "apt-get install --yes $name",
                "elevated": true
             }
          ]
@@ -275,7 +275,7 @@
          "fedora": true,
          "ubuntu": {
             "elevated": true,
-            "command": "sudo add-apt-repository ppa:fish-shell/release-4; sudo apt update; sudo apt install fish"
+            "command": "sudo add-apt-repository ppa:fish-shell/release-4; sudo apt-get update -y; sudo apt-get install -y fish"
          }
       },
       {

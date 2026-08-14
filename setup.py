@@ -14,7 +14,7 @@ from pathlib import Path
 
 from install_apps import install
 from python.color import Color, wrap_color
-from python.context import paths, system
+from python.context import flags, paths, system
 from python.context.system import is_windows, which
 from python.filters import NameFilter
 
@@ -44,12 +44,14 @@ def confirm(prompt: str, assume_yes: bool) -> bool:
 def append_once(file: Path, line: str, marker: str | None = None) -> bool:
     marker = marker or line
     file.parent.mkdir(parents=True, exist_ok=True)
-    current_lines = file.read_text().splitlines()
-    if file.exists() and any(marker in ln for ln in current_lines):
-        return False
-    with file.open("a", encoding="utf-8") as f:
-        f.write(f"\n{line}\n")
-    return True
+    if file.exists():
+        current_lines = file.read_text().splitlines()
+    else:
+        current_lines = []
+    if not any(marker in ln for ln in current_lines):
+        file.write_text(f"\n{line}\n")
+        return True
+    return False
 
 
 def setup_git() -> None:
@@ -175,7 +177,13 @@ def main() -> None:
     ap.add_argument(
         "--no-modules", action="store_true", help="skip pwsh module installation"
     )
+    ap.add_argument(
+        "--root", action="store_true", help="allow the script to be as root"
+    )
     args = ap.parse_args()
+    if args.root:
+        os.environ["INSTALL_SCRIPT_OVERRIDE_ROOT"]
+        flags.override_elevation_setting("*", None)
     first_batch = ["git", "pwsh", "oh-my-posh", "fish"]
     first_batch = [x for x in first_batch if not which(x)]
     if first_batch:

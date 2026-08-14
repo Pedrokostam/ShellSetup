@@ -3,11 +3,19 @@
 # Kept Windows PowerShell 5.1 compatible so it runs on a fresh machine (no pwsh 7 yet).
 [CmdletBinding()]
 param (
+   [Parameter()]
+   [Switch]
+   $root
 )
 
 if ($PSVersionTable.PSVersion.Major -ge 7 -and $PSVersionTable.Platform -notlike '*win*')
 {
    Write-Error "Detected non-windows platform and this script is designed for Windows only. Run the other setup script (.sh or .py)" -ErrorAction Stop
+}
+
+if ($root.IsPresent)
+{
+   $env:INSTALL_SCRIPT_OVERRIDE_ROOT = '1'
 }
 
 function Test-Python39

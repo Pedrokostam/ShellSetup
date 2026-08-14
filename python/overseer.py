@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+import sys
 
 from python import target_os
 from python.app_request import AppRequest, AppRequestStem
@@ -55,9 +56,17 @@ class Overseer:
         defaults = json_data["defaults"]
 
         _platform = target_os.CURRENT_PLATFORM
-        _generic_platforms = _platform.get_more_generic_installers()
-
-        current_defaults = defaults[str(_platform)]
+        _generic_platforms = _platform.get_more_generic_installers(include_self=True)
+        current_defaults = None
+        for gen in _generic_platforms:
+            current_defaults = defaults.get(str(gen))
+        if current_defaults == None:
+            chain = "->".join(str(x) for x in _generic_platforms)
+            print(
+                f"Could not find defaults for the following chain: {chain}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
         _installers = [Installer.parse(n) for n in current_defaults["installers"]]
         _default_installer = _installers[0]

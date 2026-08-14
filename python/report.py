@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import traceback
 import os
+import pprint
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from enum import Enum, StrEnum, auto
@@ -288,5 +288,8 @@ class Report:
 
     def save_report(self, target: Path):
         target.parent.mkdir(exist_ok=True, parents=True)
-        with target.open("+w") as f:
-            json.dump([asdict(a) for a in self.app_logs.values()], f, indent=True)
+        try:
+            with target.open("+w") as f:
+                json.dump([asdict(a) for a in self.app_logs.values()], f, indent=True)
+        except PermissionError:
+            pprint.pprint([asdict(a) for a in self.app_logs.values()])

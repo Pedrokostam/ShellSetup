@@ -1,0 +1,22 @@
+FROM ubuntu:noble
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Warsaw
+
+RUN apt-get update \
+    && apt-get install -y \
+        sudo \
+        bash \
+        ca-certificates \
+        curl \
+        git \
+        tzdata \
+    && useradd -m -s /bin/bash test \
+    && echo 'test ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/test \
+    && chmod 0440 /etc/sudoers.d/test \
+    && rm -rf /var/lib/apt/lists/*
+
+USER test
+WORKDIR /test
+
+CMD ["bash"]

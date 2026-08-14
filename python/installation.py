@@ -18,6 +18,8 @@ from python.target_os import AnyOs
 
 T = TypeVar("T")
 
+TIMEOUT = 30
+
 
 def _raise_if_none(val: T | None, name: str = "Value") -> T:
     if val is None:
@@ -138,7 +140,11 @@ class Installer:
         if not flags.SILENT:
             print(f"Preparing {self.name}... ", end="")
         result = subprocess.run(
-            self.prepare.parts, shell=False, check=False, capture_output=True
+            self.prepare.parts,
+            shell=False,
+            check=False,
+            capture_output=True,
+            timeout=TIMEOUT,
         )
         success = result.returncode == 0
         report_installer(self, success)
@@ -188,6 +194,7 @@ class Installer:
             capture_output=True,
             text=True,
             check=False,
+            timeout=TIMEOUT,
         )
         if result.returncode != 0:
             err_msg = (
@@ -217,7 +224,12 @@ class Command:
         if a := debug_skip():
             return a
         result = subprocess.run(
-            self.cmd, shell=True, capture_output=True, text=True, check=False
+            self.cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=TIMEOUT,
         )
         if result.returncode != 0:
             if result.stderr:
@@ -251,6 +263,7 @@ class Script:
             capture_output=True,
             text=True,
             check=False,
+            timeout=TIMEOUT,
         )
         if result.returncode != 0:
             if result.stderr:

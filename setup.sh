@@ -4,8 +4,21 @@
 # echo "The script will attempt to run a sudo command to cache credentials."
 # sudo echo "Password cached"
 
-if [ "$(id -u)" -eq 0 ] && [ "$FORCE" != true ]; then
-    echo "Error: This script must not be run as root." >&2
+for arg in "$@"; do
+    case "$arg" in
+        --root)
+            root="true"
+            export INSTALL_SCRIPT_OVERRIDE_ROOT='1'
+            ;;
+        *)
+            echo "Unknown argument: $arg" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$(id -u)" -eq 0 ] && [ "$root" = false ]; then
+    echo "Error: This script should not be run as root. Use --root to override" >&2
     exit 1
 fi
 
