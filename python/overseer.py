@@ -60,6 +60,8 @@ class Overseer:
         current_defaults = None
         for gen in _generic_platforms:
             current_defaults = defaults.get(str(gen))
+            if current_defaults:
+                break
         if current_defaults == None:
             chain = "->".join(str(x) for x in _generic_platforms)
             print(
@@ -145,11 +147,9 @@ class Overseer:
         return True
 
     def _test_installer(self, app: AppRequest) -> bool:
+        print(f"{app.app_name} - {app.instructions.installer_name}")
         appinst = app.instructions
-        if (
-            isinstance(appinst.installer, Installer)
-            and not appinst.installer_available()
-        ):
+        if isinstance(appinst.installer, Installer) and appinst.installer_available():
             self.report.report_fail(app=app, status=Status.FAILED_INSTALLER_UNAVAILABLE)
             return False
         return True

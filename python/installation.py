@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import stat
+from pathlib import Path
 import shutil
 import subprocess
 from collections.abc import Sequence
@@ -18,7 +21,7 @@ from python.target_os import AnyOs
 
 T = TypeVar("T")
 
-TIMEOUT = 30
+TIMEOUT = 180
 
 
 def _raise_if_none(val: T | None, name: str = "Value") -> T:
@@ -118,7 +121,8 @@ class Installer:
 
     def is_available(self):
         if self._available == None:
-            self._available = bool(shutil.which(self.check_name))
+            self._available = bool(system.which(self.check_name))
+        print(["CHECKING INSTALLER ", self.check_name, str(self._available)])
         return self._available
 
     def is_prepared(self):
@@ -239,6 +243,36 @@ class Command:
         return str(result.stdout)
 
 
+# def _read_shebang(file: Path):
+#     with file.open() as f:
+#         # read, skipping empty lines
+#         while not (line := f.readline().strip()):
+#             if line.startswith("#!"):
+#                 shebang_cmd = line.replace("#!", "")
+#             else:
+#                 # first non-empty line not a shebang, abandon search
+#                 shebang_cmd = None
+#             break
+#         else:
+#             shebang_cmd = None
+#         if system.is_windows():
+#             default_shell = os.environ.get("COMSPEC")
+#         else:
+#             default_shell = os.environ.get("SHELL")
+#         if not shebang_cmd:
+#             return default_shell
+#         res = subprocess.run(
+#             shebang_cmd.split(" "),text=True, shell=False, capture_output=True, check=False
+#         )
+#         if res.returncode==0:
+#             return res.stdout
+#         return default_shell
+
+
+def ensure_executable(path: Path):
+    subprocess.run(["sudo", "chmod", "+x", str(path)], capture_output=True, check=False)
+
+
 @dataclass
 class Script:
     script_path: str
@@ -257,8 +291,10 @@ class Script:
         abs_path = (paths.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path).resolve()
         if not abs_path.exists():
             raise AppInstallError(problem=f"script file {self.script_path} not found")
+        if not system.is_windows():
+            ensure_executable(abs_path)
         result = subprocess.run(
-            str(abs_path.resolve()),
+            str(abs_path),
             shell=True,
             capture_output=True,
             text=True,

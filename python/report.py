@@ -7,6 +7,8 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from enum import Enum, StrEnum, auto
 from pathlib import Path
+import sys
+import tempfile
 
 from python.color import Color, wrap_color
 from python.error import AppInstallError, InstallScriptError
@@ -292,4 +294,14 @@ class Report:
             with target.open("+w") as f:
                 json.dump([asdict(a) for a in self.app_logs.values()], f, indent=True)
         except PermissionError:
-            pprint.pprint([asdict(a) for a in self.app_logs.values()])
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, delete_on_close=False) as f:
+                    f.write(b"hello")
+                    print(
+                        f"Could not save normal report - fallback saved to {f.name}",
+                        file=sys.stderr,
+                    )
+            except:  # noqa: E722
+                print("\nREPORT GENERATION FAILED\n")
+                pprint.pprint([asdict(a) for a in self.app_logs.values()])
+                print()
