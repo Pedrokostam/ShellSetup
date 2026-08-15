@@ -145,7 +145,7 @@ def print_border(typ: LinePos, widths: Sequence[int]):
 
 
 def getto(items: Sequence[str], last_limit: int | None):
-    if last_limit == None or last_limit <= 0:
+    if last_limit is None or last_limit <= 0:
         return tuple(items[:-1]) + (items[-1],)
     return tuple(items[:-1]) + (crop_word(items[-1], last_limit),)
 
@@ -232,7 +232,7 @@ class Report:
     ):
         if isinstance(details, InstallScriptError):
             details = details.message()
-        if details == None or len(details.strip()) == 0:
+        if details is None or len(details.strip()) == 0:
             details = None
         details = details or status.details() or ""
 

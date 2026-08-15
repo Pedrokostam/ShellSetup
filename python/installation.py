@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import os
-import stat
-from pathlib import Path
-import shutil
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from time import sleep
 from typing import Literal, TypeVar
 
 # from python import context
 from python import printing, target_os
 from python.cmd_parts import CmdParts
-from python.color import Color, wrap_color
+from python.color import Color
 from python.context import flags, paths, system
 from python.error import AppInstallError
 from python.printing import one_line_report
@@ -71,7 +69,7 @@ def debug_skip() -> str | None:
 
 def _get_per_system_elevation(node: dict, platform: AnyOs) -> bool | None:
     val = node.get("elevated")
-    if val == None:
+    if val is None:
         return None
     if isinstance(val, bool):
         return val
@@ -81,7 +79,7 @@ def _get_per_system_elevation(node: dict, platform: AnyOs) -> bool | None:
     plats = platform.get_more_generic_installers(include_self=True)
     for p in plats:
         platform_val: bool | None | str = val.get(str(p), fallback)
-        if isinstance(platform_val, bool) or platform_val == None:
+        if isinstance(platform_val, bool) or platform_val is None:
             break
     else:
         platform_val = val["default"]
@@ -120,7 +118,7 @@ class Installer:
         )
 
     def is_available(self):
-        if self._available == None:
+        if self._available is None:
             self._available = bool(system.which(self.check_name))
         print(["CHECKING INSTALLER ", self.check_name, str(self._available)])
         return self._available
@@ -130,7 +128,7 @@ class Installer:
 
     @one_line_report(initial_msg="Preparing {self.name;YELLOW} - {self.prepare}… ")
     def prepare_installer(self) -> bool:
-        if self.prepare == None:
+        if self.prepare is None:
             report_installer_prepared(self)
             return True
         is_prepped = is_installer_prepared(self)
@@ -161,7 +159,7 @@ class Installer:
         elevation_required = flags.get_elevation_setting(
             self.name, self.elevation_required
         )
-        if is_installer_prepared(self) == None:
+        if is_installer_prepared(self) is None:
             self.prepare_installer()
         if is_installer_prepared(self) == False:
             raise AppInstallError(
@@ -278,9 +276,20 @@ class Script:
     script_path: str
     app_name: str
     elevation_required: bool | None
+    _is_executable: bool | None = None
 
-    def is_available(self) -> Literal[True]:
-        return True
+    def abs_path(self) -> Path:
+        return (paths.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path).resolve()
+
+    def is_available(self) -> bool:
+        if self._is_executable is None:
+            a = self.abs_path()
+            if not a.exists() or not a.is_file():
+                self._is_executable = False
+            else:
+                ensure_executable(a)
+                self._is_executable = os.access(a, os.X_OK)
+        return self._is_executable
 
     @one_line_report(
         initial_msg="Installing {self.app_name;MAGENTA} with script {self.script_path;YELLOW}… "

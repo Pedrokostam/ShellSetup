@@ -7,6 +7,7 @@ This script is stdlib only and requires at least Python 3.9
 from __future__ import annotations
 
 import argparse
+from enum import StrEnum, auto
 import os
 import sys
 from pathlib import Path
@@ -30,11 +31,18 @@ from python.overseer import Overseer
 from python.target_os import CONCRETE_OS
 
 
+class ListType(StrEnum):
+    STEMS = auto()
+    PARSABLE = auto()
+    INSTALLABLE = auto()
+    TO_INSTALL = auto()
+
+
 def test_parsing(json_path: Path):
     for cos in CONCRETE_OS:
         with patch("python.overseer.detect_platform", return_value=cos):
             ctx = Overseer.create_context(json_path)
-            apps = ctx._parse_requests()
+            apps = ctx.apps_to_install()
             print("=" * 50)
             print(f"Parsed apps for system {os}:\n")
             for a in apps:
@@ -43,7 +51,24 @@ def test_parsing(json_path: Path):
             pprint(ctx)
 
 
-def install(filters: Filters | ComplexFilter | None=None, no_report: bool = False):
+def print_apps(
+    filters: Filters | ComplexFilter | None = None,
+    list_type: ListType = ListType.TO_INSTALL,
+):
+    overseer = Overseer.create_context(paths.APP_JSON_PATH, filters)
+    match list_type:
+        case ListType.STEMS:
+            a = overseer.all_parsable_stems()
+        case ListType.PARSABLE:
+            a = overseer.all_parsable_apps()
+        case ListType.INSTALLABLE:
+            a = overseer.all_installable_apps()
+        case _:
+            a = overseer.apps_to_install()
+    pprint(a)
+
+
+def install(filters: Filters | ComplexFilter | None = None, no_report: bool = False):
     overseer = Overseer.create_context(paths.APP_JSON_PATH, filters)
     overseer.install()
     if not no_report:
@@ -63,11 +88,17 @@ if __name__ == "__main__":
     ap.add_argument("--not-installer", "-I", nargs="*", default=[])
     ap.add_argument("--debug", nargs="*", default=[])
     ap.add_argument(
+        "--list",
+        action="store_true",
+        help="Print all apps from json, applicable to current platform",
+    )
+    ap.add_argument(
         "--disable-elevation-prohibition",
         action="store_true",
         help="Disables checks guarding against running installer with elevation==False when elevated.",
     )
     args = ap.parse_args()
+    print(args)
     if args.plain:
         flags.NO_COLOR = True
     if args.debug:
@@ -85,4 +116,10 @@ if __name__ == "__main__":
         + [NotGroupFilter(x) for x in args.not_group]
         + [NotInstallerFilter(x) for x in args.not_installer]
     )
-    install(filters=filters)
+    print(args)
+    print(filters)
+    if args.list:
+        print_apps()
+        sys.exit(0)
+
+    # install(filters=filters)

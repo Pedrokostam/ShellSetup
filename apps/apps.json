@@ -88,6 +88,25 @@
    },
    "apps": [
       {
+         "name": "unzip",
+         "group": "linux-core",
+         "linux": true
+      },
+      {
+         "name": "coreutils",
+         "description": "Includes realpath and dirname for OMP. They should be always present anyway.",
+         "group": "linux-core",
+         "linux": true
+      },
+      {
+         "name": "curl",
+         "group": "core",
+         "linux": true,
+         "windows": {
+            "name": "cURL.cURL"
+         }
+      },
+      {
          "name": "scoop",
          "group": "package_managers",
          "windows": {

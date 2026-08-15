@@ -13,6 +13,7 @@ DEFAULT_GROUP = "core"
 class AppRequestStem:
     app_name: str
     pretty_name: str
+    check_name: list[str] | None
     group_name: str = DEFAULT_GROUP
     description: str | None = None
 
@@ -48,13 +49,12 @@ class AppRequest:
         cls,
         ars: AppRequestStem,
         instructions: InstallInstruction,
-        check_name: list[str] | None,
     ) -> AppRequest:
         return AppRequest(
             app_name=ars.app_name,
             pretty_name=ars.pretty_name,
             description=ars.description,
-            check_name=check_name,
+            check_name=ars.check_name,
             group_name=ars.group_name,
             instructions=instructions,
         )
@@ -65,4 +65,5 @@ class AppRequest:
             pretty_name=self.pretty_name,
             group_name=self.group_name,
             description=self.description,
+            check_name=self.check_name,
         )

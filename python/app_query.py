@@ -165,7 +165,7 @@ def refresh_PATH():
             [shell, "-lc", "echo $PATH"], text=True
         ).strip()
         os.environ["PATH"] = new_path
-    none_keys = [k for k, v in __EXISTING_APPS_CALLABLE.items() if v == None]
+    none_keys = [k for k, v in __EXISTING_APPS_CALLABLE.items() if v is None]
     for key in none_keys:
         del __EXISTING_APPS_CALLABLE[key]
 

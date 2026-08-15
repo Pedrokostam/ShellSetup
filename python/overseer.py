@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-import sys
 
 from python import target_os
 from python.app_request import AppRequest, AppRequestStem
-from python.context import flags, paths, system
+from python.context import paths, system
 from python.error import (
     AppInstallError,
     InstallScriptError,
@@ -43,9 +43,60 @@ def is_elevated() -> bool:
 class Overseer:
     _source_json: dict = field(repr=False)
     app_filter: ComplexFilter
-    report: Report
     installers: list[Installer]
     default_installer: Installer
+    report: Report = field(default_factory=Report)
+    _all_parsable_stems: list[AppRequestStem] | None = field(repr=False, default=None)
+    _all_parsable_apps: list[AppRequest] | None = field(repr=False, default=None)
+    _all_installable_apps: list[AppRequest] | None = field(repr=False, default=None)
+    _apps_to_install: list[AppRequest] | None = field(repr=False, default=None)
+
+    def all_parsable_apps(self):
+        """
+        All app requests that have valid install instruction for the current platform.
+        """
+        if self._all_parsable_apps is None:
+            app_node = self._source_json["apps"]
+            assert isinstance(app_node, list)
+            apps = [
+                self.__stem_to_full(self.__parse_app_request_stem(n), n)
+                for n in app_node
+            ]
+            self._all_parsable_apps = [a for a in apps if a]
+
+        return self._all_parsable_apps
+
+    def all_parsable_stems(self):
+        """
+        All app request stems that are syntactically correct
+        """
+        if self._all_parsable_stems is None:
+            app_node = self._source_json["apps"]
+            assert isinstance(app_node, list)
+            stems = [self.__parse_app_request_stem(n) for n in app_node]
+            self._all_parsable_stems = stems
+        return self._all_parsable_stems
+
+    def all_installable_apps(self):
+        """
+        All app requests that are not already installed and have available installers
+        """
+        if self._all_installable_apps is None:
+            reqs = self.all_parsable_apps()
+            installable = [r for r in reqs if self.__is_app_installable(r)]
+            self._all_installable_apps = installable
+        return self._all_installable_apps
+
+    def apps_to_install(self):
+        """
+        All app request that are installable and were not filtered out
+        """
+        if self._apps_to_install is None:
+            installable = self.all_installable_apps()
+            self._apps_to_install = [
+                a for a in installable if self.app_filter.filter(a)
+            ]
+        return self._apps_to_install
 
     @classmethod
     def create_context(
@@ -62,7 +113,7 @@ class Overseer:
             current_defaults = defaults.get(str(gen))
             if current_defaults:
                 break
-        if current_defaults == None:
+        if current_defaults is None:
             chain = "->".join(str(x) for x in _generic_platforms)
             print(
                 f"Could not find defaults for the following chain: {chain}",
@@ -81,13 +132,11 @@ class Overseer:
                 _installers.extend(
                     Installer.parse(n) for n in generic_installer["installers"]
                 )
-
         return Overseer(
             installers=_installers,
             app_filter=cpl_filter,
             default_installer=_default_installer,
             _source_json=json_data,
-            report=Report(),
         )
 
     def _parse_install_instruction(
@@ -132,6 +181,7 @@ class Overseer:
 
         if installer_key:
             matching_installer = self.get_installer(installer_key)
+
             if not matching_installer:
                 raise AppInstallError(problem=f"installer {installer_key} not found")
             return InstallInstruction(
@@ -140,24 +190,10 @@ class Overseer:
 
         raise JsonSyntaxError(problem="app node contains too little information")
 
-    def _test_app_installed(self, app: AppRequest) -> bool:
-        if app.check_name and any(system.is_app_installed(x) for x in app.check_name):
-            self.report.report_preinstall(app)
-            return False
-        return True
-
-    def _test_installer(self, app: AppRequest) -> bool:
-        print(f"{app.app_name} - {app.instructions.installer_name}")
-        appinst = app.instructions
-        if isinstance(appinst.installer, Installer) and appinst.installer_available():
-            self.report.report_fail(app=app, status=Status.FAILED_INSTALLER_UNAVAILABLE)
-            return False
-        return True
-
-    def _parse_app_request(self, node: dict) -> AppRequest | None:
+    def __parse_app_request_stem(self, node: dict) -> AppRequestStem:
         """
-        Parses the JSON node and tests whether it's already installed and whether the installer is available
-        Outputs None if any of the stages fails.
+        Parses the JSON node and outputs stems of app request
+        No report are done
         """
         app_name: str = node["name"]
         pretty_name: str = node.get("prettyName", app_name)
@@ -171,22 +207,25 @@ class Overseer:
         elif isinstance(check_name_value, str):
             check_name = [check_name_value]
 
-        ars = AppRequestStem(
+        return AppRequestStem(
             app_name=app_name,
             pretty_name=pretty_name,
             description=description,
             group_name=group_name,
+            check_name=check_name,
         )
 
-        if not self.app_filter.filter(ars):
-            self.report.report_skip(ars, status=Status.SKIPPED_CHOICE)
-            return None
-
+    def __stem_to_full(self, ars: AppRequestStem, node: dict) -> AppRequest | None:
+        """
+        Upgrades a stem to full app request if the installer for the current platform is specified.
+        Outputs None if not, or if the install instructions are invalid.
+        Fails are reported.
+        """
         matching_key = target_os.CURRENT_PLATFORM.find_most_concrete_system(
             [target_os.get_system_from_string(k) for k in node if k != "name"]
         )
 
-        if matching_key == None:
+        if matching_key is None:
             self.report.report_skip(app=ars, status=Status.SKIPPED_PLATFORM)
             return None
         try:
@@ -194,30 +233,30 @@ class Overseer:
             if not instruction:
                 self.report.report_skip(app=ars, status=Status.SKIPPED_PLATFORM)
                 return None
-            if check_name and instruction.package_name not in check_name:
-                check_name.append(instruction.package_name)
-            request = AppRequest.from_stem(
-                ars, instructions=instruction, check_name=check_name
-            )
-            if self._test_app_installed(request) and self._test_installer(request):
-                return request
-            return None
-
+            request = AppRequest.from_stem(ars, instructions=instruction)
+            return request
         except InstallScriptError as e:
             self.report.report_fail(app=ars, details=e, status=Status.FAILED)
             return None
+
+    def __is_app_installable(self, app: AppRequest) -> bool:
+        """
+        Tests the request, checking if the app is already installed and whether the installer is available.
+        Fails are reported
+        """
+        if app.check_name and any(system.is_app_installed(x) for x in app.check_name):
+            self.report.report_preinstall(app)
+            return False
+        if not app.instructions.installer.is_available():
+            self.report.report_fail(app=app, status=Status.FAILED_INSTALLER_UNAVAILABLE)
+            return False
+        return True
+
 
     def get_installer(self, name: str) -> Installer | None:
         name = name.casefold()
         return next((i for i in self.installers if i.name.casefold() == name), None)
 
-    def _parse_requests(self) -> list[AppRequest]:
-        app_node = self._source_json["apps"]
-        assert isinstance(app_node, list)
-
-        apps = [self._parse_app_request(n) for n in app_node]
-
-        return [a for a in apps if a]
 
     def _install_app(self, app: AppRequest):
         try:
@@ -234,7 +273,7 @@ class Overseer:
 
     @timed
     def install(self):
-        app_requests = self._parse_requests()
+        app_requests = self.apps_to_install()
         needs_sudo = any(x.instructions.elevation_required for x in app_requests)
         if needs_sudo:
             cache_sudo()

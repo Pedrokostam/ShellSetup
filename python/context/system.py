@@ -190,7 +190,7 @@ def refresh_PATH():
             .split(":")
         )
         os.environ["PATH"] = ":".join(old_path + new_path)
-    none_keys = [k for k, v in __EXISTING_APPS_CALLABLE.items() if v == None]
+    none_keys = [k for k, v in __EXISTING_APPS_CALLABLE.items() if v is None]
     for key in none_keys:
         del __EXISTING_APPS_CALLABLE[key]
 
