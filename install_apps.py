@@ -7,7 +7,9 @@ This script is stdlib only and requires at least Python 3.9
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from enum import StrEnum, auto
+import json
 import os
 import sys
 from pathlib import Path
@@ -15,6 +17,7 @@ from pprint import pprint
 from unittest.mock import patch
 
 # importing ./python.__init__.py automatically checks the python version and elevation status
+from python.app_request import AppRequest, AppRequestStem
 from python.color import Color
 from python.context import flags, paths
 from python.filters import (
@@ -54,18 +57,33 @@ def test_parsing(json_path: Path):
 def print_apps(
     filters: Filters | ComplexFilter | None = None,
     list_type: ListType = ListType.TO_INSTALL,
+    as_json: bool = False,
 ):
     overseer = Overseer.create_context(paths.APP_JSON_PATH, filters)
     match list_type:
         case ListType.STEMS:
-            a = overseer.all_parsable_stems()
+            all_apps: Sequence[AppRequest | AppRequestStem] = []
+            all_apps.extend(overseer.all_parsable_apps())
+            anames = {x.app_name for x in all_apps}
+            for s in overseer.all_parsable_stems():
+                if s.app_name not in anames:
+                    all_apps.append(s)
+            title = "all apps in the JSON"
         case ListType.PARSABLE:
-            a = overseer.all_parsable_apps()
+            all_apps = overseer.all_parsable_apps()
+            title = "all valid apps for the system"
         case ListType.INSTALLABLE:
-            a = overseer.all_installable_apps()
+            all_apps = overseer.all_installable_apps()
+            title = "all apps that can be installed"
         case _:
-            a = overseer.apps_to_install()
-    pprint(a)
+            all_apps = overseer.apps_to_install()
+            title = "all apps that would be installed"
+    all_apps = sorted(all_apps, key=lambda x: x.app_name)
+    print("Listing " + title, file=sys.stderr)
+    if as_json:
+        print(json.dumps([x.simple_dict() for x in all_apps], indent=3))
+    else:
+        print(*(x.pretty_form() for x in all_apps), sep="\n")
 
 
 def install(filters: Filters | ComplexFilter | None = None, no_report: bool = False):
@@ -89,8 +107,17 @@ if __name__ == "__main__":
     ap.add_argument("--debug", nargs="*", default=[])
     ap.add_argument(
         "--list",
-        action="store_true",
-        help="Print all apps from json, applicable to current platform",
+        type=lambda s: ListType[s.upper()],
+        choices=list(ListType),
+        default=None,
+        help="Print all apps that match given criterion and filters.",
+    )
+    ap.add_argument(
+        "--list-json",
+        type=lambda s: ListType[s.upper()],
+        choices=list(ListType),
+        default=None,
+        help="Output a simplified JSON of all apps that match given criterion and filters.",
     )
     ap.add_argument(
         "--disable-elevation-prohibition",
@@ -118,8 +145,13 @@ if __name__ == "__main__":
     )
     print(args)
     print(filters)
-    if args.list:
-        print_apps()
+    if args.list or args.list_json:
+        list_type = args.list if args.list else args.list_json
+        print_apps(
+            ComplexFilter.coerce(filters),
+            list_type=list_type,
+            as_json=args.list_json is not None,
+        )
         sys.exit(0)
 
     # install(filters=filters)
