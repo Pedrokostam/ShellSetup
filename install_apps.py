@@ -6,39 +6,24 @@ This script is stdlib only and requires at least Python 3.9
 
 from __future__ import annotations
 
-import argparse
-from collections.abc import Sequence
-from enum import StrEnum, auto
 import json
 import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from pprint import pprint
 from unittest.mock import patch
 
 # importing ./python.__init__.py automatically checks the python version and elevation status
 from python.app_request import AppRequest, AppRequestStem
-from python.color import Color
-from python.context import flags, paths
+from python.arguments import ListArgs, ListType, parse_install_app
+from python.context import paths
 from python.filters import (
     ComplexFilter,
     Filters,
-    GroupFilter,
-    InstallerFilter,
-    NameFilter,
-    NotGroupFilter,
-    NotInstallerFilter,
-    NotNameFilter,
 )
 from python.overseer import Overseer
 from python.target_os import CONCRETE_OS
-
-
-class ListType(StrEnum):
-    STEMS = auto()
-    PARSABLE = auto()
-    INSTALLABLE = auto()
-    TO_INSTALL = auto()
 
 
 def test_parsing(json_path: Path):
@@ -94,64 +79,8 @@ def install(filters: Filters | ComplexFilter | None = None, no_report: bool = Fa
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("-P", "--plain", action="store_true", help="Disable coloring")
-    ap.add_argument("-q", "--quiet", action="store_true")
-    ap.add_argument("--test", action="store_true")
-    ap.add_argument("--group", "-g", nargs="*", default=[])
-    ap.add_argument("--name", "-n", nargs="*", default=[])
-    ap.add_argument("--installer", "-i", nargs="*", default=[])
-    ap.add_argument("--not-group", "-G", nargs="*", default=[])
-    ap.add_argument("--not-name", "-N", nargs="*", default=[])
-    ap.add_argument("--not-installer", "-I", nargs="*", default=[])
-    ap.add_argument("--debug", nargs="*", default=[])
-    ap.add_argument(
-        "--list",
-        type=lambda s: ListType[s.upper()],
-        choices=list(ListType),
-        default=None,
-        help="Print all apps that match given criterion and filters.",
-    )
-    ap.add_argument(
-        "--list-json",
-        type=lambda s: ListType[s.upper()],
-        choices=list(ListType),
-        default=None,
-        help="Output a simplified JSON of all apps that match given criterion and filters.",
-    )
-    ap.add_argument(
-        "--disable-elevation-prohibition",
-        action="store_true",
-        help="Disables checks guarding against running installer with elevation==False when elevated.",
-    )
-    args = ap.parse_args()
-    print(args)
-    if args.plain:
-        flags.NO_COLOR = True
-    if args.debug:
-        flags.set_debug(args.debug)
-    if args.test:
-        test_parsing(paths.APP_JSON_PATH)
+    parse_res = parse_install_app(__doc__)
+    if isinstance(parse_res, ListArgs):
+        print_apps(parse_res.filters, parse_res.mode, parse_res.json)
         sys.exit(0)
-    if args.disable_elevation_prohibition:
-        flags.override_elevation_setting("*", None)
-    filters = (
-        [NameFilter(x) for x in args.name]
-        + [GroupFilter(x) for x in args.group]
-        + [InstallerFilter(x) for x in args.installer]
-        + [NotNameFilter(x) for x in args.not_name]
-        + [NotGroupFilter(x) for x in args.not_group]
-        + [NotInstallerFilter(x) for x in args.not_installer]
-    )
-    print(args)
-    print(filters)
-    if args.list or args.list_json:
-        list_type = args.list if args.list else args.list_json
-        print_apps(
-            ComplexFilter.coerce(filters),
-            list_type=list_type,
-            as_json=args.list_json is not None,
-        )
-        sys.exit(0)
-
-    # install(filters=filters)
+    install(filters=parse_res)

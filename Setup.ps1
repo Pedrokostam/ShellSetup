@@ -5,7 +5,9 @@
 param (
    [Parameter()]
    [Switch]
-   $root
+   $root,
+   [Parameter(ValueFromRemainingArguments)]
+   $remaining
 )
 
 if ($PSVersionTable.PSVersion.Major -ge 7 -and $PSVersionTable.Platform -notlike '*win*')
@@ -63,5 +65,4 @@ if (-not $python)
    Write-Error 'Python 3.9+ is required but is not available in this session. Open a new shell and re-run.'
    exit 1
 }
-
-& $python "$PSScriptRoot/setup.py"
+& $python "$PSScriptRoot/setup.py" @remaining

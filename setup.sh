@@ -4,6 +4,7 @@
 # echo "The script will attempt to run a sudo command to cache credentials."
 # sudo echo "Password cached"
 
+extra_args=()
 for arg in "$@"; do
     case "$arg" in
         --root)
@@ -11,8 +12,7 @@ for arg in "$@"; do
             export INSTALL_SCRIPT_OVERRIDE_ROOT='1'
             ;;
         *)
-            echo "Unknown argument: $arg" >&2
-            exit 1
+            extra_args+=("$arg")
             ;;
     esac
 done
@@ -42,4 +42,4 @@ if ! command -v python3 &> /dev/null || ! python3 -c 'import sys; sys.exit(0 if 
     fi
 fi
 
-python3 "$SCRIPT_DIR/setup.py"
+python3 "$SCRIPT_DIR/setup.py" "${extra_args[@]}"

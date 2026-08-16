@@ -120,7 +120,6 @@ class Installer:
     def is_available(self):
         if self._available is None:
             self._available = bool(system.which(self.check_name))
-        print(["CHECKING INSTALLER ", self.check_name, str(self._available)])
         return self._available
 
     def is_prepared(self):

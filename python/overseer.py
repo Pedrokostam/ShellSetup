@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from python import target_os
+from python.app_group import AppGroup
 from python.app_request import AppRequest, AppRequestStem
 from python.context import paths, system
 from python.error import (
@@ -62,8 +63,9 @@ class Overseer:
                 self.__stem_to_full(self.__parse_app_request_stem(n), n)
                 for n in app_node
             ]
-            self._all_parsable_apps = [a for a in apps if a]
-
+            self._all_parsable_apps = sorted(
+                [a for a in apps if a], key=lambda x: (x.group, x.app_name)
+            )
         return self._all_parsable_apps
 
     def all_parsable_stems(self):
@@ -74,7 +76,9 @@ class Overseer:
             app_node = self._source_json["apps"]
             assert isinstance(app_node, list)
             stems = [self.__parse_app_request_stem(n) for n in app_node]
-            self._all_parsable_stems = stems
+            self._all_parsable_stems = sorted(
+                stems, key=lambda x: (x.group, x.app_name)
+            )
         return self._all_parsable_stems
 
     def all_installable_apps(self):
@@ -211,7 +215,7 @@ class Overseer:
             app_name=app_name,
             pretty_name=pretty_name,
             description=description,
-            group_name=group_name,
+            group=AppGroup(group_name),
             check_name=check_name,
         )
 
@@ -252,11 +256,9 @@ class Overseer:
             return False
         return True
 
-
     def get_installer(self, name: str) -> Installer | None:
         name = name.casefold()
         return next((i for i in self.installers if i.name.casefold() == name), None)
-
 
     def _install_app(self, app: AppRequest):
         try:

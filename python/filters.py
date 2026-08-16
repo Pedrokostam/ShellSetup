@@ -77,11 +77,11 @@ class ComplexFilter:
     def filter(self, app: AppRequest | AppRequestStem) -> bool:
         if self.names and app.app_name.casefold() not in self.names:
             return False
-        if self.groups and app.group_name.casefold() not in self.groups:
+        if self.groups and app.group.casefold() not in self.groups:
             return False
         if self.not_names and app.app_name.casefold() in self.not_names:
             return False
-        if self.not_groups and app.group_name.casefold() in self.not_groups:
+        if self.not_groups and app.group.casefold() in self.not_groups:
             return False
         inst_name = (
             app.instructions.installer_name().casefold()

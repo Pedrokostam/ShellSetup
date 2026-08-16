@@ -78,7 +78,7 @@ class AppLog:
 
     @property
     def app_group(self) -> str:
-        return self.app.group_name
+        return self.app.group.name
 
     @property
     def app_name(self) -> str:

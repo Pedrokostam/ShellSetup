@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
+from functools import total_ordering
 
+from python.app_group import DEFAULT_GROUP, AppGroup
 from python.color import Color
 from python.error import AppInstallError
 
 from .installation import Installer, InstallInstruction
-
-DEFAULT_GROUP = "core"
 
 
 def _pretty_dict(d: dict) -> str:
@@ -37,7 +37,7 @@ class AppRequestStem:
     app_name: str
     pretty_name: str
     check_name: list[str] | None
-    group_name: str = DEFAULT_GROUP
+    group: AppGroup = field(default_factory=lambda: DEFAULT_GROUP)
     description: str | None = None
 
     def to_stem(self) -> AppRequestStem:
@@ -49,6 +49,7 @@ class AppRequestStem:
             del dicto["pretty_name"]
         if not self.description:
             del dicto["description"]
+        dicto["group"] = str(dicto["group"])
         return dicto
 
     def pretty_form(self) -> str:
@@ -61,7 +62,7 @@ class AppRequest:
     pretty_name: str
     check_name: list[str] | None
     instructions: InstallInstruction
-    group_name: str = DEFAULT_GROUP
+    group: AppGroup = field(default_factory=lambda: DEFAULT_GROUP)
     description: str | None = None
 
     def prepare(self, prepared_set: set[str]):
@@ -89,7 +90,7 @@ class AppRequest:
             pretty_name=ars.pretty_name,
             description=ars.description,
             check_name=ars.check_name,
-            group_name=ars.group_name,
+            group=ars.group,
             instructions=instructions,
         )
 
@@ -97,17 +98,13 @@ class AppRequest:
         return AppRequestStem(
             app_name=self.app_name,
             pretty_name=self.pretty_name,
-            group_name=self.group_name,
+            group=self.group,
             description=self.description,
             check_name=self.check_name,
         )
 
     def simple_dict(self) -> dict:
-        dicto = asdict(self.to_stem())
-        if self.app_name == self.pretty_name:
-            del dicto["pretty_name"]
-        if not self.description:
-            del dicto["description"]
+        dicto =self.to_stem().simple_dict()
         dicto["installer"] = self.instructions.installer_name()
         return dicto
 
