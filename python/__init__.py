@@ -5,18 +5,14 @@ import subprocess
 import sys
 from typing import TypeVar
 
+_ENV_VAR = "INSTALL_SCRIPT_OVERRIDE_ROOT"
+
 if sys.version_info < (3, 9):  # noqa: UP036
     sys.exit("Python 3.9+ required")
-if os.name != "nt":
-    if os.geteuid() == 0 and not os.getenv("INSTALL_SCRIPT_OVERRIDE_ROOT"):
-        sys.exit(
-            "This script cannot be run as root. To override it set environemt variable INSTALL_SCRIPT_OVERRIDE_ROOT"
-        )
-    result = subprocess.run(["sudo", "-Nnv"], capture_output=True)
-    if result.returncode != 0:
-        print("Sudo credentials are NOT cached. Prompting...")
-        subprocess.run(["sudo", "-v"])
-    print("Sudo credentials are cached. Proceeding...")
+if os.name != "nt" and os.geteuid() == 0 and not os.getenv(_ENV_VAR):
+    sys.exit(
+        f"This script cannot be run as root. To override it set environemt variable {_ENV_VAR}"
+    )
 
 if os.name == "nt":
     sys.stdout.reconfigure(encoding="utf-8")  # pyright: ignore[reportAttributeAccessIssue]

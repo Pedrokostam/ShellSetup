@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-# echo "Elevation will be required at some points of the installation process."
-# echo "The script will attempt to run a sudo command to cache credentials."
-# sudo echo "Password cached"
-
 extra_args=()
 for arg in "$@"; do
     case "$arg" in
@@ -16,11 +12,6 @@ for arg in "$@"; do
             ;;
     esac
 done
-
-if [ "$(id -u)" -eq 0 ] && [ "$root" = false ]; then
-    echo "Error: This script should not be run as root. Use --root to override" >&2
-    exit 1
-fi
 
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 

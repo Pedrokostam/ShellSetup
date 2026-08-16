@@ -1,14 +1,15 @@
 from __future__ import annotations
-
 import json
+from python.json_converter import JsonConverter
 import os
 import pprint
+import sys
+import tempfile
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from enum import Enum, StrEnum, auto
 from pathlib import Path
-import sys
-import tempfile
+from typing import Any
 
 from python.color import Color, wrap_color
 from python.error import AppInstallError, InstallScriptError
@@ -78,7 +79,7 @@ class AppLog:
 
     @property
     def app_group(self) -> str:
-        return self.app.group.name
+        return str(self.app.group)
 
     @property
     def app_name(self) -> str:
@@ -144,16 +145,16 @@ def print_border(typ: LinePos, widths: Sequence[int]):
     print(line)
 
 
-def getto(items: Sequence[str], last_limit: int | None):
+def crop_last_item_if_needed(items: Sequence[str], last_limit: int | None):
     if last_limit is None or last_limit <= 0:
         return tuple(items[:-1]) + (items[-1],)
     return tuple(items[:-1]) + (crop_word(items[-1], last_limit),)
 
 
-def oooooooooooooooooookay(app_logs: list[AppLog]):
+def create_table_payload(app_logs: list[AppLog]):
     # list of tuples of string
     initial = [
-        getto(
+        crop_last_item_if_needed(
             (
                 a.status.short_form(),
                 a.app_pretty_name,
@@ -177,7 +178,7 @@ def oooooooooooooooooookay(app_logs: list[AppLog]):
     space_for_details = (
         os.get_terminal_size().columns - non_details_width - formatting_padding
     )
-    return [getto(x, space_for_details) for x in initial]
+    return [crop_last_item_if_needed(x, space_for_details) for x in initial]
 
 
 def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
@@ -186,12 +187,11 @@ def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
     if not als:
         print("No apps to list")
         return
-    als = sorted(als, key=lambda x: (x.app_group, x.app_pretty_name))
 
     headers = [" ", "App name", "Group", "Details"]
     header_limits = tuple(map(len, headers))
 
-    strings = oooooooooooooooooookay(als)
+    strings = create_table_payload(als)
 
     raw_widths = [tuple(len(x) for x in s) for s in strings]
     widths = tuple(
@@ -292,16 +292,9 @@ class Report:
         target.parent.mkdir(exist_ok=True, parents=True)
         try:
             with target.open("+w") as f:
-                json.dump([asdict(a) for a in self.app_logs.values()], f, indent=True)
+                json.dump(list(self.app_logs.values()), f, indent=True, cls=JsonConverter)
         except PermissionError:
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, delete_on_close=False) as f:
-                    f.write(b"hello")
-                    print(
-                        f"Could not save normal report - fallback saved to {f.name}",
-                        file=sys.stderr,
-                    )
-            except:  # noqa: E722
-                print("\nREPORT GENERATION FAILED\n")
-                pprint.pprint([asdict(a) for a in self.app_logs.values()])
-                print()
+            print("\nREPORT GENERATION FAILED\n")
+            p = json.dumps(list(self.app_logs.values()), indent=True, cls=JsonConverter)
+            print(p)
+            print()

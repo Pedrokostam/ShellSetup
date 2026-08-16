@@ -24,7 +24,8 @@ class ListType(StrEnum):
 def _add_list_parser_Args(parser: argparse.ArgumentParser):
     parser.add_argument("--json", action="store_true")
     parser.add_argument(
-        "--list-type",
+        "type",
+        nargs='?',
         type=lambda s: ListType[s.upper()],
         default=ListType.TO_INSTALL,
         help="specify which apps to select",
@@ -102,16 +103,15 @@ def apply_flags(namespace: argparse.Namespace):
 
 
 def parse_install_app(description: str|None):
-
     base_parser = _get_parser(description)
     subs = base_parser.add_subparsers()
     _add_list_parser_Args(subs.add_parser("list"))
     namespace = base_parser.parse_args()
     apply_flags(namespace)
     filters = get_filters(namespace)
-    if namespace.list_type:
+    if hasattr(namespace,'type'):
         return ListArgs(
-            filters=filters, mode=namespace.list_type, json=bool(namespace.json)
+            filters=filters, mode=namespace.type, json=bool(namespace.json)
         )
     return filters
 

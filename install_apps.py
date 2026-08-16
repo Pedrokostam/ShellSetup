@@ -53,6 +53,7 @@ def print_apps(
             for s in overseer.all_parsable_stems():
                 if s.app_name not in anames:
                     all_apps.append(s)
+            all_apps = sorted(all_apps, key=lambda x: (x.group, x.app_name))
             title = "all apps in the JSON"
         case ListType.PARSABLE:
             all_apps = overseer.all_parsable_apps()
@@ -63,7 +64,6 @@ def print_apps(
         case _:
             all_apps = overseer.apps_to_install()
             title = "all apps that would be installed"
-    all_apps = sorted(all_apps, key=lambda x: x.app_name)
     print("Listing " + title, file=sys.stderr)
     if as_json:
         print(json.dumps([x.simple_dict() for x in all_apps], indent=3))

@@ -5,8 +5,10 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, AnyStr
 
 from python import target_os
+from python import app_group
 from python.app_group import AppGroup
 from python.app_request import AppRequest, AppRequestStem
 from python.context import paths, system
@@ -42,7 +44,7 @@ def is_elevated() -> bool:
 
 @dataclass
 class Overseer:
-    _source_json: dict = field(repr=False)
+    _source_json: list[dict[str, Any]] = field(repr=False)
     app_filter: ComplexFilter
     installers: list[Installer]
     default_installer: Installer
@@ -57,14 +59,21 @@ class Overseer:
         All app requests that have valid install instruction for the current platform.
         """
         if self._all_parsable_apps is None:
-            app_node = self._source_json["apps"]
-            assert isinstance(app_node, list)
-            apps = [
-                self.__stem_to_full(self.__parse_app_request_stem(n), n)
-                for n in app_node
-            ]
+            interim = []
+            for full_node in self._source_json:
+                default_group = full_node.get("defaultGroup")
+                app_node = full_node["apps"]
+                assert isinstance(app_node, list)
+                apps = [
+                    self.__stem_to_full(
+                        self.__parse_app_request_stem(n, default_group), n
+                    )
+                    for n in app_node
+                ]
+                interim.extend(apps)
+
             self._all_parsable_apps = sorted(
-                [a for a in apps if a], key=lambda x: (x.group, x.app_name)
+                [a for a in interim if a], key=lambda x: (x.group, x.app_name)
             )
         return self._all_parsable_apps
 
@@ -73,11 +82,17 @@ class Overseer:
         All app request stems that are syntactically correct
         """
         if self._all_parsable_stems is None:
-            app_node = self._source_json["apps"]
-            assert isinstance(app_node, list)
-            stems = [self.__parse_app_request_stem(n) for n in app_node]
+            interim = []
+            for full_node in self._source_json:
+                default_group = full_node.get("defaultGroup")
+                app_node = full_node["apps"]
+                assert isinstance(app_node, list)
+                stems = [
+                    self.__parse_app_request_stem(n, default_group) for n in app_node
+                ]
+                interim.extend(stems)
             self._all_parsable_stems = sorted(
-                stems, key=lambda x: (x.group, x.app_name)
+                interim, key=lambda x: (x.group, x.app_name)
             )
         return self._all_parsable_stems
 
@@ -107,6 +122,7 @@ class Overseer:
         cls, apps_json: Path, filters: Filters | ComplexFilter | None = None
     ) -> Overseer:
         cpl_filter = ComplexFilter.coerce(filters)
+        # TODO: Add grepping for multiple jsons
         json_data = json.loads(apps_json.read_text(encoding="utf-8"))
         defaults = json_data["defaults"]
 
@@ -194,15 +210,18 @@ class Overseer:
 
         raise JsonSyntaxError(problem="app node contains too little information")
 
-    def __parse_app_request_stem(self, node: dict) -> AppRequestStem:
+    def __parse_app_request_stem(
+        self, node: dict, default_group: AppGroup | None
+    ) -> AppRequestStem:
         """
         Parses the JSON node and outputs stems of app request
         No report are done
         """
+        default_group = default_group or app_group.DEFAULT_GROUP
         app_name: str = node["name"]
         pretty_name: str = node.get("prettyName", app_name)
         check_name: list[str] | None = None
-        group_name: str = node.get("group") or "core"
+        group_name: str = node.get("group") or default_group.name
         description: str = node.get("description") or ""
         check_name_value = node.get("checkName") or True
 
