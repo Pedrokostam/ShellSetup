@@ -1,6 +1,7 @@
 import argparse
 from dataclasses import dataclass
 from enum import StrEnum, auto
+import sys
 
 from python.context import flags
 from python.filters import (
@@ -40,7 +41,7 @@ def _add_list_parser_Args(parser: argparse.ArgumentParser):
         default=ListType.INSTALLABLE,
         help="specify which apps to select",
     )
-    parser.add_argument('--override-os', type=str, help='override detected platform')
+    parser.add_argument("--override-os", type=str, help="override detected platform")
     return parser
 
 
@@ -98,11 +99,18 @@ def get_filters(namespace: argparse.Namespace) -> Filters:
 
 
 def _get_parser(description: str | None) -> argparse.ArgumentParser:
-    return argparse.ArgumentParser(
-        description=description,
-        suggest_on_error=True,
-        parents=[_common_parser()],
-    )
+
+    if sys.version_info[:2] >= (3, 12):
+        return argparse.ArgumentParser(
+            description=description,
+            suggest_on_error=True,
+            parents=[_common_parser()],
+        )
+    else:
+        return argparse.ArgumentParser(
+            description=description,
+            parents=[_common_parser()],
+        )
 
 
 @dataclass
@@ -119,9 +127,10 @@ def apply_flags(namespace: argparse.Namespace):
         flags.SILENT = True
     if namespace.no_color:
         flags.NO_COLOR = True
-    if hasattr(namespace,'override_os') and namespace.override_os:
-        target_os.CURRENT_PLATFORM = target_os.get_system_from_string(namespace.override_os)
-        
+    if hasattr(namespace, "override_os") and namespace.override_os:
+        target_os.CURRENT_PLATFORM = target_os.get_system_from_string(
+            namespace.override_os
+        )
 
 
 def parse_install_app(description: str | None):
