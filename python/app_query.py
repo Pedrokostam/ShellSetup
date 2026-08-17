@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 from pathlib import Path
@@ -20,6 +21,24 @@ def run_lines(cmd: list[str]) -> list[str]:
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []
     return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
+
+
+@timed
+def npm_existing() -> set[str]:
+    if not which("npm"):
+        return set()
+    try:
+        out = subprocess.run(
+            ["npm", "list", "--global", "--depth=0", "--json"],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        npm_json: dict = json.loads(out.stdout)
+        return set(npm_json["dependencies"].keys())
+    except Exception as e:  # noqa: BLE001
+        print(f"npm error: {e}", file=sys.stderr)
+        return set()
 
 
 @timed
@@ -93,13 +112,13 @@ def get_apps_from_managers() -> set[str]:
     from python import target_os
 
     platform = target_os.CURRENT_PLATFORM
-    if platform == target_os.Windows():
+    if isinstance(platform, target_os.Windows):
         return windows_existing()
-    if platform == target_os.Arch():
+    if isinstance(platform, target_os.Arch):
         return set(run_lines(["pacman", "-Qq"]))
-    if platform == target_os.Fedora() or platform == target_os.OpenSuse():
+    if isinstance(platform, (target_os.Fedora, target_os.OpenSuse)):
         return set(run_lines(["rpm", "-qa", "--qf", "%{NAME}\n"]))
-    if platform == target_os.Debian():
+    if isinstance(platform, target_os.Debian):
         return set(run_lines(["dpkg-query", "-f", "${binary:Package}\n", "-W"]))
     return set()
 

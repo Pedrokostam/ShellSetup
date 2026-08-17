@@ -13,6 +13,7 @@ from pprint import pprint
 from unittest.mock import patch
 
 # importing ./python.__init__.py automatically checks the python version and elevation status
+from python import target_os
 from python.app_request import AppRequest, AppRequestStem
 from python.arguments import ListArgs, ListType, parse_install_app
 from python.filters import (
@@ -54,10 +55,10 @@ def print_apps(
             title = "all apps in the JSON"
         case ListType.PARSABLE:
             all_apps = overseer.all_parsable_apps()
-            title = "all valid apps for the system"
+            title = f"all valid apps for {target_os.CURRENT_PLATFORM}"
         case _:
             all_apps = overseer.all_installable_apps()
-            title = "all apps that can be installed"
+            title = f"all apps that can be installed on {target_os.CURRENT_PLATFORM}"
     print("Listing " + title, file=sys.stderr)
     if as_json:
         print(json.dumps([x.simple_dict() for x in all_apps], indent=3))

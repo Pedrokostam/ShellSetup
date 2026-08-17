@@ -12,6 +12,7 @@ from python.filters import (
     NotInstallerFilter,
     NotNameFilter,
 )
+from python import target_os
 
 
 class ListType(StrEnum):
@@ -39,6 +40,7 @@ def _add_list_parser_Args(parser: argparse.ArgumentParser):
         default=ListType.INSTALLABLE,
         help="specify which apps to select",
     )
+    parser.add_argument('--override-os', type=str, help='override detected platform')
     return parser
 
 
@@ -117,6 +119,9 @@ def apply_flags(namespace: argparse.Namespace):
         flags.SILENT = True
     if namespace.no_color:
         flags.NO_COLOR = True
+    if hasattr(namespace,'override_os') and namespace.override_os:
+        target_os.CURRENT_PLATFORM = target_os.get_system_from_string(namespace.override_os)
+        
 
 
 def parse_install_app(description: str | None):
