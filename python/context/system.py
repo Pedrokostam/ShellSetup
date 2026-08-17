@@ -1,48 +1,73 @@
-from __future__ import annotations
-
 import collections.abc
 import concurrent.futures
 import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 from pathlib import Path
 
 from python.printing import timed
 
+# Mutable caches, populated in a background thread and at runtime.
+__EXISTING_APPS_CALLABLE: dict[str, str | None] = {}
+
 
 def is_windows() -> bool:
     return os.name == "nt"
 
 
-def __is_elevated() -> bool:
-    if is_windows():
-        import ctypes
-
-        try:
-            return bool(ctypes.windll.shell32.IsUserAnAdmin())
-        except OSError:
-            return False
-    # on linux, this script cannot be run as root
-    return False
-
-
-# Mutable caches, populated in a background thread and at runtime.
-__EXISTING_APPS_CALLABLE: dict[str, str | None] = {}
-
-
-def run_lines(cmd: list[str]) -> list[str]:
+def run_lines(cmd: list[str]) -> set[str]:
+    if not which(cmd[0]):
+        return set()
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return []
-    return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"{cmd[0]} error: {e}", file=sys.stderr)
+        return set()
+    return {ln.strip() for ln in out.stdout.splitlines() if ln.strip()}
+
+
+@timed
+def pacman_existing() -> set[str]:
+    return set(run_lines(["pacman", "-Qq"]))
+
+
+@timed
+def rpm_existing() -> set[str]:
+    return set(run_lines(["rpm", "-qa", "--qf", "%{NAME}\n"]))
+
+
+@timed
+def dpkg_existing() -> set[str]:
+    return set(run_lines(["dpkg-query", "-f", "${binary:Package}\n", "-W"]))
+
+
+@timed
+def npm_existing() -> set[str]:
+    if not which("npm"):
+        return set()
+    try:
+        out = subprocess.run(
+            "npm list --global --depth=0 --json",
+            shell=True,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        npm_json: dict = json.loads(out.stdout)
+        return set(npm_json.get("dependencies", {}).keys())
+    except Exception as e:  # noqa: BLE001
+        print(f"npm error: {e}", file=sys.stderr)
+        return set()
 
 
 @timed
 def scoop_existing() -> set[str]:
+    if not which("scoop"):
+        return set()
     # scoop is a shim on Windows; shell=True resolves it via PATHEXT.
     out = subprocess.run(
         "scoop export", capture_output=True, text=True, shell=True, check=False
@@ -50,12 +75,15 @@ def scoop_existing() -> set[str]:
     try:
         data = json.loads(out.stdout)
         return {a["Name"] for a in data.get("apps", [])}
-    except (json.JSONDecodeError, KeyError):
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"scoop error: {e}", file=sys.stderr)
         return {ln.split()[0] for ln in out.stdout.splitlines() if ln.strip()}
 
 
 @timed
 def winget_existing() -> set[str]:
+    if not which("winget"):
+        return set()
     ids = set()
     tmp = Path(tempfile.gettempdir()) / "winget_export.json"
     subprocess.run(
@@ -82,28 +110,10 @@ def winget_existing() -> set[str]:
                     pid = pkg.get("PackageIdentifier")
                     if pid:
                         ids.add(pid)
-    except (json.JSONDecodeError, OSError):
-        pass
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"winget error: {e}", file=sys.stderr)
     finally:
         tmp.unlink(missing_ok=True)
-    return ids
-
-
-def windows_existing() -> set[str]:
-    is_winget = shutil.which("winget")
-    is_scoop = shutil.which("scoop")
-    ids: set[str] = set()
-    if is_winget and is_scoop:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            winget = executor.submit(winget_existing)
-            scoop = executor.submit(scoop_existing)
-            ids |= winget.result()
-            ids |= scoop.result()
-    else:
-        if is_winget:
-            ids |= winget_existing()
-        if is_scoop:
-            ids |= scoop_existing()
     return ids
 
 
@@ -111,26 +121,28 @@ def windows_existing() -> set[str]:
 def get_apps_from_managers() -> set[str]:
     from python import target_os
 
+    pool: list[collections.abc.Callable[[], set[str]]] = [npm_existing]
     platform = target_os.CURRENT_PLATFORM
-    if platform == target_os.Windows():
-        return windows_existing()
-    if platform == target_os.Arch():
-        return set(run_lines(["pacman", "-Qq"]))
-    if platform == target_os.Fedora() or platform == target_os.OpenSuse():
-        return set(run_lines(["rpm", "-qa", "--qf", "%{NAME}\n"]))
-    if platform == target_os.Debian():
-        return set(run_lines(["dpkg-query", "-f", "${binary:Package}\n", "-W"]))
-    return set()
+    if isinstance(platform, target_os.Windows):
+        pool.append(winget_existing)
+        pool.append(scoop_existing)
+    if isinstance(platform, target_os.Arch):
+        pool.append(pacman_existing)
+    if isinstance(platform, (target_os.Fedora, target_os.OpenSuse)):
+        pool.append(rpm_existing)
+    if isinstance(platform, target_os.Debian):
+        pool.append(dpkg_existing)
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(f) for f in pool]
+        return set().union(*[f.result() for f in futures])
 
 
-# TODO: make it accept multiple methods again, add npm check
-# Maybe define the procedure to check in json?
 class LazySet(collections.abc.Set):
     def __init__(self, target_function):
         self._data: set[str] = set()
-        self._target_function = target_function
         self._thread = threading.Thread(
-            target=self._populate, args=(self._target_function,), daemon=True
+            target=self._populate, args=(target_function,), daemon=True
         )
         self._thread.start()
 
@@ -154,10 +166,6 @@ class LazySet(collections.abc.Set):
         return len(self._data)
 
     def refresh(self):
-        self._data.clear()
-        self._thread = threading.Thread(
-            target=self._populate, args=(self._target_function,), daemon=True
-        )
         self._thread.start()
 
 
@@ -165,7 +173,9 @@ __EXISTING_APPS_MANAGERS = LazySet(get_apps_from_managers)
 
 
 def refresh_PATH():
-    if is_windows():
+    from python import target_os
+
+    if target_os.is_windows():
         import winreg
 
         # Read System PATH
@@ -183,14 +193,11 @@ def refresh_PATH():
                 user_path = ""
         os.environ["PATH"] = f"{system_path};{user_path}"
     else:
-        old_path = os.environ["PATH"].split(":")
         shell = os.environ.get("SHELL", "/bin/bash")
-        new_path = (
-            subprocess.check_output([shell, "-c", "echo $PATH"], text=True)
-            .strip()
-            .split(":")
-        )
-        os.environ["PATH"] = ":".join(old_path + new_path)
+        new_path = subprocess.check_output(
+            [shell, "-lc", "echo $PATH"], text=True
+        ).strip()
+        os.environ["PATH"] = new_path
     none_keys = [k for k, v in __EXISTING_APPS_CALLABLE.items() if v is None]
     for key in none_keys:
         del __EXISTING_APPS_CALLABLE[key]
@@ -199,18 +206,15 @@ def refresh_PATH():
 def which(app: str, refresh: bool = False) -> str | None:
     if refresh:
         refresh_PATH()
-    if app in __EXISTING_APPS_CALLABLE:
-        return __EXISTING_APPS_CALLABLE[app]
+    dict_val = __EXISTING_APPS_CALLABLE.get(app, -13)
+    if not isinstance(dict_val, int):
+        return dict_val
     new_val = shutil.which(app)
     __EXISTING_APPS_CALLABLE[app] = new_val
     return new_val
 
 
 def is_app_installed(app: str) -> bool:
-    from python.context import flags
-
-    if flags.is_debug(flags.DEBUG_MOCK_INSTALL):
-        return False
     if which(app):
         return True
     return app in __EXISTING_APPS_MANAGERS
@@ -219,13 +223,11 @@ def is_app_installed(app: str) -> bool:
 def refresh_manager_apps():
     __EXISTING_APPS_MANAGERS.refresh()
 
-
-IS_ELEVATED: bool = __is_elevated()
-__PWSH_KEY = "NEWEST_POWERSHELL"
+NEWEST_POWERSHELL_ENV = "NEWEST_POWERSHELL"
 if p7 := which("pwsh"):
     pwsh_exe = p7
 elif p5 := which("powershell"):
     pwsh_exe = p5
 else:
     pwsh_exe = "THERE_IS_NO_POWERSHELL_ON_THIS_SYSTEM"
-os.environ[__PWSH_KEY] = pwsh_exe
+os.environ[NEWEST_POWERSHELL_ENV] = pwsh_exe

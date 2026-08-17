@@ -89,16 +89,6 @@
             "name": "Git.Git"
          },
          "linux": true
-      },
-      {
-         "name": "firefox",
-         "windows": {
-            "name": "Mozilla.Firefox"
-         },
-         "opensuse": {
-            "name": "MozillaFirefox"
-         },
-         "linux": true
       }
    ]
 }

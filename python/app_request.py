@@ -70,7 +70,6 @@ class AppRequest:
         inst = self.instructions.installer
         if inst.name in prepared_set:
             return
-        print(f"Preparing {inst.name} - {inst.prepare}")
         if inst.prepare_installer():
             prepared_set.add(inst.name)
         else:

@@ -7,28 +7,28 @@
          "windows": {
             "name": "Gyan.FFmpeg"
          },
-         "any": true
+         "linux": true
       },
       {
          "name": "poppler",
          "windows": {
             "name": "oschwartz10612.Poppler"
          },
-         "any": true
+         "linux": true
       },
       {
          "name": "fd",
          "windows": {
             "name": "sharkdp.fd"
          },
-         "any": true
+         "linux": true
       },
       {
          "name": "resvg",
          "windows": {
             "installer": "scoop"
          },
-         "any": true
+         "linux": true
       },
       {
          "name": "imagemagick",
@@ -36,14 +36,14 @@
          "windows": {
             "name": "ImageMagick.ImageMagick"
          },
-         "any": true
+         "linux": true
       },
       {
          "name": "7zip",
          "windows": {
             "name": "7zip.7zip"
          },
-         "any": true
+         "linux": true
       }
    ]
 }

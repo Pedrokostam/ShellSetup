@@ -97,3 +97,11 @@ class ComplexFilter:
         if self.installers and inst_name not in self.installers:
             return False
         return not (self.not_installers and inst_name in self.not_installers)
+
+    def subtract(self, subtract_from: 'ComplexFilter'):
+        """
+        Addes negative filters from the other complex filter
+        """
+        self.not_names.union(subtract_from.not_names)
+        self.not_groups.union(subtract_from.not_groups)
+        self.not_installers.union(subtract_from.not_installers)

@@ -13,14 +13,15 @@ import sys
 from pathlib import Path
 
 from install_apps import install
+from python.arguments import parse_setup
 from python.color import Color, wrap_color
 from python.context import flags, logs, paths, system
-from python.context.system import is_windows, which
-from python.filters import NameFilter
+from python.context.system import NEWEST_POWERSHELL_ENV, is_windows, which
+from python.filters import ComplexFilter, GroupFilter, NameFilter
 
 
 def pwsh_exe() -> str | None:
-    return which("pwsh") or (which("powershell") if is_windows() else None)
+    return os.getenv(NEWEST_POWERSHELL_ENV)
 
 
 def run(
@@ -112,7 +113,7 @@ def setup_omp():
         return
 
 
-def setup_pwsh_modules(no_modules: bool) -> None:
+def setup_pwsh_modules(no_modules: bool = False) -> None:
     if no_modules:
         return
     pwsh = which("pwsh")
@@ -170,33 +171,21 @@ def setup_profiles() -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument(
-        "-y", "--yes", action="store_true", help="assume yes for all prompts"
-    )
-    ap.add_argument(
-        "--no-modules", action="store_true", help="skip pwsh module installation"
-    )
-    ap.add_argument(
-        "--root", action="store_true", help="allow the script to be as root"
-    )
-    args = ap.parse_args()
-    if args.root:
-        os.environ["INSTALL_SCRIPT_OVERRIDE_ROOT"]
-        flags.override_elevation_setting("*", None)
-    first_batch = ["git", "pwsh", "oh-my-posh", "fish"]
-    first_batch = [x for x in first_batch if not which(x)]
-    if first_batch:
-        install(filters=[NameFilter(x) for x in first_batch])
-        print("\nRefreshing environment")
-        system.refresh_PATH()
-        system.refresh_manager_apps()
-        print()
+    filters = parse_setup(__doc__)
+    arg_filter = ComplexFilter.coerce(filters)
+    first_filters = ComplexFilter.coerce(
+        [GroupFilter(x) for x in ["core", "core_linux", "package_managers", "shells"]]
+    ).subtract(arg_filter)
+    install(filters=first_filters)
+    print("\nRefreshing environment")
+    system.refresh_PATH()
+    system.refresh_manager_apps()
+    print()
     setup_git()
     setup_profiles()
-    setup_pwsh_modules(args.no_modules)
+    setup_pwsh_modules()
     setup_font()
-    install()
+    install(filters)
     if flags.is_debug(flags.DEBUG_TIME):
         logs.print_time_logs()
 

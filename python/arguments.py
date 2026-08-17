@@ -137,7 +137,7 @@ def parse_install_app(description: str | None) -> Filters | ListArgs:
     return filters
 
 
-def parse_setup(description: str) -> Filters:
+def parse_setup(description: str|None) -> Filters:
     parser = _get_parser(description)
     namespace = parser.parse_args()
     apply_flags(namespace)
