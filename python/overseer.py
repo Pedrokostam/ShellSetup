@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, AnyStr
 
+import re
 from python import target_os
 from python import app_group
 from python.app_group import AppGroup
@@ -40,6 +41,67 @@ def is_elevated() -> bool:
         except OSError:
             return False
     return os.geteuid() == 0
+
+
+K_DEF_GROUP = "defaultGroup"
+K_PLT_INST = "platformInstallers"
+K_INST = "installers"
+K_PLT_DEF = "default"
+K_APP = "apps"
+K_GROUP = 'group'
+
+
+def _merge_nodes(file_path: Path, merged: dict[str, Any]):
+    json_data = json.loads(file_path.read_text(encoding="utf-8"))
+    if K_DEF_GROUP in json_data:
+        default_group_name = str(json_data[K_DEF_GROUP])
+    else:
+        default_group_name = re.sub("^apps_*", "", file_path.stem, flags=re.IGNORECASE)
+
+    # platformInstallers
+    if K_PLT_INST in json_data:
+        assert isinstance(json_data[K_PLT_INST], dict)
+        if K_PLT_INST not in merged:
+            merged[K_PLT_INST] = {}
+        curr_plt_inst: dict[str,Any] = json_data[K_PLT_INST]
+        merged_plt_inst: dict[str,Any]= merged[K_PLT_INST]
+        
+        # arbitrary platform
+        for curr_plt_key, current_platform in curr_plt_inst.values():
+            current_platform:dict[str,Any]
+            if curr_plt_key not in merged_plt_inst:
+                merged_plt_inst[curr_plt_key] = {}
+            merged_platform:dict[str,Any] = merged_plt_inst[curr_plt_key]
+            
+            # default installer for platform
+            if K_PLT_DEF in current_platform:
+                if K_PLT_DEF not in merged_platform:
+                    merged_platform[K_PLT_DEF] = current_platform[K_PLT_DEF]
+                else:
+                    raise InstallScriptError(
+                        f"Multiple default installers for a {curr_plt_key}"
+                    )
+            # installer list
+            if K_INST not in merged_platform:
+                merged_platform[K_INST] = []
+            if K_INST in current_platform:
+                assert isinstance(current_platform[K_INST], list)
+                current_platform_installers :list[dict[str,Any]] = current_platform[K_INST]
+                for inst in current_platform_installers:
+                    inst["_file"] =file_path.stem
+                merged_platform[K_INST].extend(current_platform[K_INST])
+
+    # apps
+    if K_APP not in merged:
+        merged[K_APP] = []
+    if K_APP in json_data:
+        assert isinstance(json_data[K_APP], list)
+        current_apps:list[dict[str,Any]] = json_data[K_APP]
+        for x in current_apps:
+            x['_file']=file_path.stem
+            if K_GROUP not in x:
+                x[K_GROUP]=default_group_name
+        merged[K_APP].extend(json_data[K_APP])
 
 
 @dataclass

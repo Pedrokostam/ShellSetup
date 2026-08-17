@@ -8,7 +8,7 @@
          "type": "string",
          "description": ""
       },
-      "defaults": {
+      "platformInstallers": {
          "type": "object",
          "properties": {
             "windows": {

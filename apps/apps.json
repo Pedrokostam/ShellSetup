@@ -1,6 +1,6 @@
 {
    "$schema": "./schema.json",
-   "defaults": {
+   "platformInstallers": {
       "windows": {
          "default": "winget",
          "installers": [
