@@ -7,26 +7,26 @@ from string import Formatter
 from time import perf_counter
 from typing import Any
 
+from python.context import logs
+
 
 def timed(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        from python.context import flags
 
         sig = inspect.signature(func)
         start = perf_counter()
         try:
             return func(*args, **kwargs)
         finally:
-            if flags.is_debug(flags.DEBUG_TIME):
-                duration = perf_counter() - start
-                bound = sig.bind(*args, **kwargs)
-                bound.apply_defaults()
-                arguments = dict(bound.arguments)
-                arguments.pop("self", None)
-                arguments.pop("cls", None)
-                print(func.__name__, arguments, f" => {duration:.3f}s")
-
+            duration = perf_counter() - start
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            arguments = dict(bound.arguments)
+            arguments.pop("self", None)
+            arguments.pop("cls", None)
+            logs.add_time_log(func.__name__,arguments,duration)
+            # print(func.__name__, arguments, f" => {duration:.3f}s")
     return wrapper
 
 

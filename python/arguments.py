@@ -99,18 +99,10 @@ def get_filters(namespace: argparse.Namespace) -> Filters:
 
 
 def _get_parser(description: str | None) -> argparse.ArgumentParser:
-
+    argus = {"description": description, "parents": [_common_parser()]}
     if sys.version_info[:2] >= (3, 14):
-        return argparse.ArgumentParser(
-            description=description,
-            suggest_on_error=True,
-            parents=[_common_parser()],
-        )
-    else:
-        return argparse.ArgumentParser(
-            description=description,
-            parents=[_common_parser()],
-        )
+        argus["suggest_on_error"] = True
+    return argparse.ArgumentParser(**argus)
 
 
 @dataclass
@@ -133,7 +125,7 @@ def apply_flags(namespace: argparse.Namespace):
         )
 
 
-def parse_install_app(description: str | None):
+def parse_install_app(description: str | None) -> Filters | ListArgs:
     base_parser = _get_parser(description)
     subs = base_parser.add_subparsers()
     _add_list_parser_Args(subs.add_parser("list", parents=[_common_parser()]))
@@ -145,7 +137,7 @@ def parse_install_app(description: str | None):
     return filters
 
 
-def parse_setup(description: str):
+def parse_setup(description: str) -> Filters:
     parser = _get_parser(description)
     namespace = parser.parse_args()
     apply_flags(namespace)

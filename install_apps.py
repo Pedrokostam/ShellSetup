@@ -16,6 +16,7 @@ from unittest.mock import patch
 from python import target_os
 from python.app_request import AppRequest, AppRequestStem
 from python.arguments import ListArgs, ListType, parse_install_app
+from python.context import flags, logs
 from python.filters import (
     ComplexFilter,
     Filters,
@@ -64,6 +65,8 @@ def print_apps(
         print(json.dumps([x.simple_dict() for x in all_apps], indent=3))
     else:
         print(*(x.pretty_form() for x in all_apps), sep="\n")
+    if flags.is_debug(flags.DEBUG_TIME):
+        logs.print_time_logs()
 
 
 def install(filters: Filters | ComplexFilter | None = None, no_report: bool = False):
@@ -79,3 +82,5 @@ if __name__ == "__main__":
         print_apps(parse_res.filters, parse_res.mode, parse_res.json)
         sys.exit(0)
     install(filters=parse_res)
+    if flags.is_debug(flags.DEBUG_TIME):
+        logs.print_time_logs()

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from install_apps import install
 from python.color import Color, wrap_color
-from python.context import flags, paths, system
+from python.context import flags, logs, paths, system
 from python.context.system import is_windows, which
 from python.filters import NameFilter
 
@@ -197,6 +197,8 @@ def main() -> None:
     setup_pwsh_modules(args.no_modules)
     setup_font()
     install()
+    if flags.is_debug(flags.DEBUG_TIME):
+        logs.print_time_logs()
 
 
 if __name__ == "__main__":

@@ -15,16 +15,34 @@ from python.printing import timed
 __EXISTING_APPS_CALLABLE: dict[str, str | None] = {}
 
 
-def run_lines(cmd: list[str]) -> list[str]:
+def run_lines(cmd: list[str]) -> set[str]:
+    if not which(cmd[0]):
+        return set()
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, check=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        return []
-    return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
+        return set()
+    return {ln.strip() for ln in out.stdout.splitlines() if ln.strip()}
+
+
+@timed
+def pacman_existing() -> set[str]:
+    return set(run_lines(["pacman", "-Qq"]))
+
+
+@timed
+def rpm_existing() -> set[str]:
+    return set(run_lines(["rpm", "-qa", "--qf", "%{NAME}\n"]))
+
+
+@timed
+def dpkg_existing() -> set[str]:
+    return set(run_lines(["dpkg-query", "-f", "${binary:Package}\n", "-W"]))
 
 
 @timed
 def npm_existing() -> set[str]:
+    print('NPMPANY')
     if not which("npm"):
         return set()
     try:
@@ -35,7 +53,7 @@ def npm_existing() -> set[str]:
             text=True,
         )
         npm_json: dict = json.loads(out.stdout)
-        return set(npm_json["dependencies"].keys())
+        return set(npm_json.get("dependencies", {}).keys())
     except Exception as e:  # noqa: BLE001
         print(f"npm error: {e}", file=sys.stderr)
         return set()
@@ -43,6 +61,8 @@ def npm_existing() -> set[str]:
 
 @timed
 def scoop_existing() -> set[str]:
+    if not which("scoop"):
+        return set()
     # scoop is a shim on Windows; shell=True resolves it via PATHEXT.
     out = subprocess.run(
         "scoop export", capture_output=True, text=True, shell=True, check=False
@@ -56,6 +76,8 @@ def scoop_existing() -> set[str]:
 
 @timed
 def winget_existing() -> set[str]:
+    if not which("winget"):
+        return set()
     ids = set()
     tmp = Path(tempfile.gettempdir()) / "winget_export.json"
     subprocess.run(
@@ -89,38 +111,27 @@ def winget_existing() -> set[str]:
     return ids
 
 
-def windows_existing() -> set[str]:
-    is_winget = shutil.which("winget")
-    is_scoop = shutil.which("scoop")
-    ids: set[str] = set()
-    if is_winget and is_scoop:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            winget = executor.submit(winget_existing)
-            scoop = executor.submit(scoop_existing)
-            ids |= winget.result()
-            ids |= scoop.result()
-    else:
-        if is_winget:
-            ids |= winget_existing()
-        if is_scoop:
-            ids |= scoop_existing()
-    return ids
-
-
 @timed
 def get_apps_from_managers() -> set[str]:
     from python import target_os
 
+    pool: list[collections.abc.Callable[[], set[str]]] = [npm_existing]
+    print("SDFGSDFSDFSDF")
+
     platform = target_os.CURRENT_PLATFORM
     if isinstance(platform, target_os.Windows):
-        return windows_existing()
+        pool.append(winget_existing)
+        pool.append(scoop_existing)
     if isinstance(platform, target_os.Arch):
-        return set(run_lines(["pacman", "-Qq"]))
+        pool.append(pacman_existing)
     if isinstance(platform, (target_os.Fedora, target_os.OpenSuse)):
-        return set(run_lines(["rpm", "-qa", "--qf", "%{NAME}\n"]))
+        pool.append(rpm_existing)
     if isinstance(platform, target_os.Debian):
-        return set(run_lines(["dpkg-query", "-f", "${binary:Package}\n", "-W"]))
-    return set()
+        pool.append(dpkg_existing)
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(f) for f in pool]
+        return set().union(*[f.result() for f in futures])
 
 
 class LazySet(collections.abc.Set):
@@ -154,7 +165,8 @@ class LazySet(collections.abc.Set):
         self._thread.start()
 
 
-__EXISTING_APPS_MANAGERS = LazySet(get_apps_from_managers)
+__EXISTING_APPS_MANAGERS = None
+# __EXISTING_APPS_MANAGERS = LazySet(get_apps_from_managers)
 
 
 def refresh_PATH():
