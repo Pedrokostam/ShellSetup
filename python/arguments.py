@@ -100,7 +100,7 @@ def get_filters(namespace: argparse.Namespace) -> Filters:
 
 def _get_parser(description: str | None) -> argparse.ArgumentParser:
 
-    if sys.version_info[:2] >= (3, 12):
+    if sys.version_info[:2] >= (3, 14):
         return argparse.ArgumentParser(
             description=description,
             suggest_on_error=True,
