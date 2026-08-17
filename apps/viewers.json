@@ -1,0 +1,12 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "viewers",
+   "apps": [
+      {
+         "name": "IrfanView",
+         "windows": {
+            "name": "IrfanSkiljan.IrfanView"
+         }
+      }
+   ]
+}

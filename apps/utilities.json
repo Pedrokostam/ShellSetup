@@ -1,0 +1,49 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "utilities",
+   "apps": [
+      {
+         "name": "ffmpeg",
+         "windows": {
+            "name": "Gyan.FFmpeg"
+         },
+         "any": true
+      },
+      {
+         "name": "poppler",
+         "windows": {
+            "name": "oschwartz10612.Poppler"
+         },
+         "any": true
+      },
+      {
+         "name": "fd",
+         "windows": {
+            "name": "sharkdp.fd"
+         },
+         "any": true
+      },
+      {
+         "name": "resvg",
+         "windows": {
+            "installer": "scoop"
+         },
+         "any": true
+      },
+      {
+         "name": "imagemagick",
+         "checkName": "magick",
+         "windows": {
+            "name": "ImageMagick.ImageMagick"
+         },
+         "any": true
+      },
+      {
+         "name": "7zip",
+         "windows": {
+            "name": "7zip.7zip"
+         },
+         "any": true
+      }
+   ]
+}

@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 from enum import Enum
 
-from python import context
 from python.context import flags
 
 

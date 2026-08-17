@@ -1,0 +1,15 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "linux-core",
+   "apps": [
+      {
+         "name": "unzip",
+         "linux": true
+      },
+      {
+         "name": "coreutils",
+         "description": "Includes realpath and dirname for OMP. They should be always present anyway.",
+         "linux": true
+      }
+   ]
+}

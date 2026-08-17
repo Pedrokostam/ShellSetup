@@ -10,7 +10,6 @@ from pathlib import Path
 
 from python.printing import timed
 
-
 # Mutable caches, populated in a background thread and at runtime.
 __EXISTING_APPS_CALLABLE: dict[str, str | None] = {}
 

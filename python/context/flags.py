@@ -4,8 +4,9 @@ from collections.abc import Sequence
 SILENT = False
 __DEBUG = []
 
-DEBUG_TIME='time'
-DEBUG_MOCK_INSTALL='install'
+DEBUG_TIME = "time"
+DEBUG_MOCK_INSTALL = "install"
+
 
 def set_debug(key: str | Sequence[str]):
     if isinstance(key, str):

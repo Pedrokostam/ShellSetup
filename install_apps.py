@@ -7,17 +7,14 @@ This script is stdlib only and requires at least Python 3.9
 from __future__ import annotations
 
 import json
-import os
 import sys
 from collections.abc import Sequence
-from pathlib import Path
 from pprint import pprint
 from unittest.mock import patch
 
 # importing ./python.__init__.py automatically checks the python version and elevation status
 from python.app_request import AppRequest, AppRequestStem
 from python.arguments import ListArgs, ListType, parse_install_app
-from python.context import paths
 from python.filters import (
     ComplexFilter,
     Filters,
@@ -26,13 +23,13 @@ from python.overseer import Overseer
 from python.target_os import CONCRETE_OS
 
 
-def test_parsing(json_path: Path):
+def test_parsing():
     for cos in CONCRETE_OS:
-        with patch("python.overseer.detect_platform", return_value=cos):
-            ctx = Overseer.create_context(json_path)
-            apps = ctx.apps_to_install()
+        with patch("python.target_os.CURRENT_PLATFORM", cos):
+            ctx = Overseer.create_context()
+            apps = ctx.all_installable_apps()
             print("=" * 50)
-            print(f"Parsed apps for system {os}:\n")
+            print(f"Parsed apps for system {cos}:\n")
             for a in apps:
                 print(f"   {a}")
             print()
@@ -41,10 +38,10 @@ def test_parsing(json_path: Path):
 
 def print_apps(
     filters: Filters | ComplexFilter | None = None,
-    list_type: ListType = ListType.TO_INSTALL,
+    list_type: ListType = ListType.INSTALLABLE,
     as_json: bool = False,
 ):
-    overseer = Overseer.create_context(paths.APP_JSON_PATH, filters)
+    overseer = Overseer.create_context(filters=filters)
     match list_type:
         case ListType.STEMS:
             all_apps: Sequence[AppRequest | AppRequestStem] = []
@@ -58,12 +55,9 @@ def print_apps(
         case ListType.PARSABLE:
             all_apps = overseer.all_parsable_apps()
             title = "all valid apps for the system"
-        case ListType.INSTALLABLE:
+        case _:
             all_apps = overseer.all_installable_apps()
             title = "all apps that can be installed"
-        case _:
-            all_apps = overseer.apps_to_install()
-            title = "all apps that would be installed"
     print("Listing " + title, file=sys.stderr)
     if as_json:
         print(json.dumps([x.simple_dict() for x in all_apps], indent=3))
@@ -72,7 +66,7 @@ def print_apps(
 
 
 def install(filters: Filters | ComplexFilter | None = None, no_report: bool = False):
-    overseer = Overseer.create_context(paths.APP_JSON_PATH, filters)
+    overseer = Overseer.create_context(filters=filters)
     overseer.install()
     if not no_report:
         overseer.print_report()

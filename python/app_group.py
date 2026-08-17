@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import total_ordering
-from typing import Any
 
 
 @total_ordering
@@ -11,10 +10,10 @@ class AppGroup:
         if self.name == "core":
             weight = 0
         elif "core" in self.name:
-            weight = 100 + len(self.name.split('_'))
-        elif 'package' in self.name or 'manager' in self.name:
+            weight = 100 + len(self.name.split("_"))
+        elif "package" in self.name or "manager" in self.name:
             weight = 1000
-        elif self.name == 'test':
+        elif self.name == "test":
             weight = 1e100
         else:
             a = self.name.split("_")
@@ -27,7 +26,7 @@ class AppGroup:
             return self.name == value.name
         return False
 
-    def __lt__(self, other: AppGroup ) -> bool:
+    def __lt__(self, other: AppGroup) -> bool:
         return (self._weight, self.name) < (other._weight, other.name)
 
     def __str__(self) -> str:
@@ -36,8 +35,8 @@ class AppGroup:
     def __repr__(self) -> str:
         return f"{self.name} [{self._weight}]"
 
-    def to_json(self)->str:
+    def to_json(self) -> str:
         return self.name
 
-DEFAULT_GROUP = AppGroup('unspecified')
 
+DEFAULT_GROUP = AppGroup("unspecified")

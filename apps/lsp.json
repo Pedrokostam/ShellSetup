@@ -1,0 +1,40 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "lsp",
+   "apps": [
+      {
+         "name": "ruff",
+         "windows": {
+            "name": "astral-sh.ruff"
+         },
+         "linux": {
+            "elevated": false,
+            "command": "curl -LsSf https://astral.sh/ruff/install.sh | sh"
+         }
+      },
+      {
+         "name": "pyright",
+         "windows": {
+            "elevated": null,
+            "installer": "npm"
+         },
+         "linux": {
+            "elevated": true,
+            "installer": "npm"
+         }
+      },
+      {
+         "name": "vscode-langservers-extracted",
+         "prettyName": "vscode-langservers",
+         "checkName": "vscode-json-language-server",
+         "description": "Needed for JSON support in neovim",
+         "windows": {
+            "installer": "npm"
+         },
+         "linux": {
+            "elevated": true,
+            "installer": "npm"
+         }
+      }
+   ]
+}

@@ -1,0 +1,39 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "shells",
+   "apps": [
+      {
+         "name": "fish",
+         "windows": false,
+         "arch": true,
+         "fedora": true,
+         "ubuntu": {
+            "elevated": true,
+            "command": "sudo add-apt-repository ppa:fish-shell/release-4; sudo apt-get update -y; sudo apt-get install -y fish"
+         }
+      },
+      {
+         "name": "PowerShell",
+         "checkName": "pwsh",
+         "windows": {
+            "name": "Microsoft.PowerShell"
+         },
+         "debian": {
+            "script": "debian_pwsh_install_script.sh",
+            "elevated": true
+         },
+         "arch": {
+            "installer": "yay",
+            "name": "powershell-bin"
+         },
+         "opensuse": {
+            "script": "opensuse_pwsh_install_script.sh",
+            "elevated": true
+         },
+         "fedora": {
+            "script": "fedora_pwsh_install_script.sh",
+            "elevated": true
+         }
+      }
+   ]
+}

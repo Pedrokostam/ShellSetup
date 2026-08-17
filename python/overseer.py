@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AnyStr
+from typing import Any
 
-import re
-from python import target_os
-from python import app_group
+from python import app_group, target_os
 from python.app_group import AppGroup
 from python.app_request import AppRequest, AppRequestStem
 from python.context import paths, system
@@ -48,7 +47,19 @@ K_PLT_INST = "platformInstallers"
 K_INST = "installers"
 K_PLT_DEF = "default"
 K_APP = "apps"
-K_GROUP = 'group'
+K_GROUP = "group"
+
+
+def _assert_no_duplicates(items: list[dict[str, Any]], kind: str):
+    by_name: dict[str, list[str]] = {}
+    for item in items:
+        by_name.setdefault(item["name"], []).append(item.get("_file", "?"))
+    dupes = {name: files for name, files in by_name.items() if len(files) > 1}
+    if dupes:
+        details = "; ".join(
+            f"{name!r} declared in {', '.join(files)}" for name, files in dupes.items()
+        )
+        raise InstallScriptError(f"Duplicate {kind}: {details}")
 
 
 def _merge_nodes(file_path: Path, merged: dict[str, Any]):
@@ -56,23 +67,23 @@ def _merge_nodes(file_path: Path, merged: dict[str, Any]):
     if K_DEF_GROUP in json_data:
         default_group_name = str(json_data[K_DEF_GROUP])
     else:
-        default_group_name = re.sub("^apps_*", "", file_path.stem, flags=re.IGNORECASE)
+        default_group_name = re.sub(
+            "^apps[-_]*", "", file_path.stem, flags=re.IGNORECASE
+        )
 
     # platformInstallers
     if K_PLT_INST in json_data:
         assert isinstance(json_data[K_PLT_INST], dict)
-        if K_PLT_INST not in merged:
-            merged[K_PLT_INST] = {}
-        curr_plt_inst: dict[str,Any] = json_data[K_PLT_INST]
-        merged_plt_inst: dict[str,Any]= merged[K_PLT_INST]
-        
+        curr_plt_inst: dict[str, Any] = json_data[K_PLT_INST]
+        merged_plt_inst: dict[str, Any] = merged.setdefault(K_PLT_INST, {})
+
         # arbitrary platform
-        for curr_plt_key, current_platform in curr_plt_inst.values():
-            current_platform:dict[str,Any]
-            if curr_plt_key not in merged_plt_inst:
-                merged_plt_inst[curr_plt_key] = {}
-            merged_platform:dict[str,Any] = merged_plt_inst[curr_plt_key]
-            
+        for curr_plt_key, current_platform in curr_plt_inst.items():
+            current_platform: dict[str, Any]
+            merged_platform: dict[str, Any] = merged_plt_inst.setdefault(
+                curr_plt_key, {}
+            )
+
             # default installer for platform
             if K_PLT_DEF in current_platform:
                 if K_PLT_DEF not in merged_platform:
@@ -82,31 +93,34 @@ def _merge_nodes(file_path: Path, merged: dict[str, Any]):
                         f"Multiple default installers for a {curr_plt_key}"
                     )
             # installer list
-            if K_INST not in merged_platform:
-                merged_platform[K_INST] = []
             if K_INST in current_platform:
                 assert isinstance(current_platform[K_INST], list)
-                current_platform_installers :list[dict[str,Any]] = current_platform[K_INST]
+                current_platform_installers: list[dict[str, Any]] = current_platform[
+                    K_INST
+                ]
                 for inst in current_platform_installers:
-                    inst["_file"] =file_path.stem
-                merged_platform[K_INST].extend(current_platform[K_INST])
+                    inst["_file"] = file_path.stem
+                merged_platform.setdefault(K_INST, []).extend(current_platform[K_INST])
+                _assert_no_duplicates(
+                    merged_platform[K_INST], f"installer for {curr_plt_key}"
+                )
 
     # apps
-    if K_APP not in merged:
-        merged[K_APP] = []
+    merged.setdefault(K_APP, [])
     if K_APP in json_data:
         assert isinstance(json_data[K_APP], list)
-        current_apps:list[dict[str,Any]] = json_data[K_APP]
+        current_apps: list[dict[str, Any]] = json_data[K_APP]
         for x in current_apps:
-            x['_file']=file_path.stem
-            if K_GROUP not in x:
-                x[K_GROUP]=default_group_name
+            x["_file"] = file_path.stem
+            if K_GROUP not in x and default_group_name:
+                x[K_GROUP] = default_group_name
         merged[K_APP].extend(json_data[K_APP])
+        _assert_no_duplicates(merged[K_APP], "app")
 
 
 @dataclass
 class Overseer:
-    _source_json: list[dict[str, Any]] = field(repr=False)
+    _merged_source_json: dict[str, Any] = field(repr=False)
     app_filter: ComplexFilter
     installers: list[Installer]
     default_installer: Installer
@@ -114,28 +128,22 @@ class Overseer:
     _all_parsable_stems: list[AppRequestStem] | None = field(repr=False, default=None)
     _all_parsable_apps: list[AppRequest] | None = field(repr=False, default=None)
     _all_installable_apps: list[AppRequest] | None = field(repr=False, default=None)
-    _apps_to_install: list[AppRequest] | None = field(repr=False, default=None)
 
     def all_parsable_apps(self):
         """
         All app requests that have valid install instruction for the current platform.
         """
         if self._all_parsable_apps is None:
-            interim = []
-            for full_node in self._source_json:
-                default_group = full_node.get("defaultGroup")
-                app_node = full_node["apps"]
-                assert isinstance(app_node, list)
-                apps = [
-                    self.__stem_to_full(
-                        self.__parse_app_request_stem(n, default_group), n
-                    )
-                    for n in app_node
-                ]
-                interim.extend(apps)
-
+            default_group = self._merged_source_json.get("defaultGroup")
+            app_node = self._merged_source_json["apps"]
+            assert isinstance(app_node, list)
+            apps = [
+                self.__stem_to_full(self.__parse_app_request_stem(n, default_group), n)
+                for n in app_node
+            ]
             self._all_parsable_apps = sorted(
-                [a for a in interim if a], key=lambda x: (x.group, x.app_name)
+                [a for a in apps if a and self.app_filter.filter(a)],
+                key=lambda x: (x.group, x.app_name),
             )
         return self._all_parsable_apps
 
@@ -144,17 +152,13 @@ class Overseer:
         All app request stems that are syntactically correct
         """
         if self._all_parsable_stems is None:
-            interim = []
-            for full_node in self._source_json:
-                default_group = full_node.get("defaultGroup")
-                app_node = full_node["apps"]
-                assert isinstance(app_node, list)
-                stems = [
-                    self.__parse_app_request_stem(n, default_group) for n in app_node
-                ]
-                interim.extend(stems)
+            default_group = self._merged_source_json.get("defaultGroup")
+            app_node = self._merged_source_json["apps"]
+            assert isinstance(app_node, list)
+            stems = [self.__parse_app_request_stem(n, default_group) for n in app_node]
             self._all_parsable_stems = sorted(
-                interim, key=lambda x: (x.group, x.app_name)
+                [s for s in stems if self.app_filter.filter(s)],
+                key=lambda x: (x.group, x.app_name),
             )
         return self._all_parsable_stems
 
@@ -168,34 +172,45 @@ class Overseer:
             self._all_installable_apps = installable
         return self._all_installable_apps
 
-    def apps_to_install(self):
-        """
-        All app request that are installable and were not filtered out
-        """
-        if self._apps_to_install is None:
-            installable = self.all_installable_apps()
-            self._apps_to_install = [
-                a for a in installable if self.app_filter.filter(a)
-            ]
-        return self._apps_to_install
-
     @classmethod
     def create_context(
-        cls, apps_json: Path, filters: Filters | ComplexFilter | None = None
+        cls,
+        *,
+        apps_json: Path | None = None,
+        filters: Filters | ComplexFilter | None = None,
     ) -> Overseer:
         cpl_filter = ComplexFilter.coerce(filters)
-        # TODO: Add grepping for multiple jsons
-        json_data = json.loads(apps_json.read_text(encoding="utf-8"))
-        defaults = json_data["defaults"]
+
+        apps_json = apps_json or paths.APP_JSONS_PATH
+        matching_files = sorted(
+            f
+            for f in apps_json.parent.glob(apps_json.name)
+            if not f.name.lower().startswith("schema")
+        )
+        if not matching_files:
+            print(f"No app json files matching {apps_json}", file=sys.stderr)
+            sys.exit(1)
+        json_data: dict[str, Any] = {}
+        for file_path in matching_files:
+            _merge_nodes(file_path, json_data)
+
+        if K_PLT_INST not in json_data:
+            raise InstallScriptError(
+                f"No {K_PLT_INST!r} declared in any of: "
+                + ", ".join(f.name for f in matching_files)
+            )
+        defaults = json_data[K_PLT_INST]
 
         _platform = target_os.CURRENT_PLATFORM
         _generic_platforms = _platform.get_more_generic_installers(include_self=True)
-        current_defaults = None
+        current_platform_installers = None
+        matched_platform = None
         for gen in _generic_platforms:
-            current_defaults = defaults.get(str(gen))
-            if current_defaults:
+            current_platform_installers = defaults.get(str(gen))
+            if current_platform_installers:
+                matched_platform = gen
                 break
-        if current_defaults is None:
+        if current_platform_installers is None:
             chain = "->".join(str(x) for x in _generic_platforms)
             print(
                 f"Could not find defaults for the following chain: {chain}",
@@ -203,22 +218,24 @@ class Overseer:
             )
             sys.exit(1)
 
-        _installers = [Installer.parse(n) for n in current_defaults["installers"]]
+        _installers = [Installer.parse(n) for n in current_platform_installers[K_INST]]
         _default_installer = _installers[0]
-        if default_id := current_defaults.get("default"):
+        if default_id := current_platform_installers.get(K_PLT_DEF):
             _default_installer = next(
                 (x for x in _installers if x.name == default_id), _default_installer
             )
         for get_plat in _generic_platforms:
-            if generic_installer := defaults.get(get_plat):
+            if get_plat == matched_platform:
+                continue
+            if generic_installer := defaults.get(str(get_plat)):
                 _installers.extend(
-                    Installer.parse(n) for n in generic_installer["installers"]
+                    Installer.parse(n) for n in generic_installer[K_INST]
                 )
         return Overseer(
             installers=_installers,
             app_filter=cpl_filter,
             default_installer=_default_installer,
-            _source_json=json_data,
+            _merged_source_json=json_data,
         )
 
     def _parse_install_instruction(
@@ -285,9 +302,9 @@ class Overseer:
         check_name: list[str] | None = None
         group_name: str = node.get("group") or default_group.name
         description: str = node.get("description") or ""
-        check_name_value = node.get("checkName") or True
+        check_name_value = node.get("checkName", True)
 
-        if isinstance(check_name_value, bool) and bool(check_name_value):
+        if check_name_value is True:
             check_name = [app_name]
         elif isinstance(check_name_value, str):
             check_name = [check_name_value]
@@ -319,6 +336,13 @@ class Overseer:
                 self.report.report_skip(app=ars, status=Status.SKIPPED_PLATFORM)
                 return None
             request = AppRequest.from_stem(ars, instructions=instruction)
+            # also check the install-instruction name  against installed packages, unless
+            # checkName disabled it entirely
+            if (
+                request.check_name is not None
+                and instruction.package_name not in request.check_name
+            ):
+                request.check_name = [*request.check_name, instruction.package_name]
             return request
         except InstallScriptError as e:
             self.report.report_fail(app=ars, details=e, status=Status.FAILED)
@@ -356,7 +380,7 @@ class Overseer:
 
     @timed
     def install(self):
-        app_requests = self.apps_to_install()
+        app_requests = self.all_installable_apps()
         needs_sudo = any(x.instructions.elevation_required for x in app_requests)
         if needs_sudo:
             cache_sudo()
@@ -371,9 +395,7 @@ class Overseer:
         for prep_inst in to_prepare:
             prep_inst.prepare()
 
-        apps_to_install = [a for a in app_requests if self.app_filter.filter(a)]
-
-        for app in apps_to_install:
+        for app in app_requests:
             self._install_app(app)
 
         self.report.save_report(paths.report_json_path())

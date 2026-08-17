@@ -1,10 +1,3 @@
-from dataclasses import dataclass
-
-from python.installation import Installer
-
-from .app_request import AppRequest
-from .color import Color, wrap_color
-
 ELEVATION_REQUIRED = "Elevated user required"
 ELEVATION_FORBIDDEN = "Elevated user prohibited"
 DIFFERENT_PLATFORM = "Different platform"

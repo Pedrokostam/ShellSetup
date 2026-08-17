@@ -52,7 +52,11 @@ Filters: TypeAlias = Sequence[
 class ComplexFilter:
     def __init__(self, filters: Filters):
         self.names = {str(x).casefold() for x in filters if isinstance(x, NameFilter)}
-        self.groups = {str(x).casefold() for x in filters if isinstance(x, GroupFilter)}
+        self.groups = {
+            str(x).casefold().replace("-", "_")
+            for x in filters
+            if isinstance(x, GroupFilter)
+        }
         self.installers = {
             str(x).casefold() for x in filters if isinstance(x, InstallerFilter)
         }
@@ -60,7 +64,9 @@ class ComplexFilter:
             str(x).casefold() for x in filters if isinstance(x, NotNameFilter)
         }
         self.not_groups = {
-            str(x).casefold() for x in filters if isinstance(x, NotGroupFilter)
+            str(x).casefold().replace("-", "_")
+            for x in filters
+            if isinstance(x, NotGroupFilter)
         }
         self.not_installers = {
             str(x).casefold() for x in filters if isinstance(x, NotInstallerFilter)
@@ -77,17 +83,17 @@ class ComplexFilter:
     def filter(self, app: AppRequest | AppRequestStem) -> bool:
         if self.names and app.app_name.casefold() not in self.names:
             return False
-        if self.groups and app.group.casefold() not in self.groups:
+        if self.groups and app.group.name not in self.groups:
             return False
         if self.not_names and app.app_name.casefold() in self.not_names:
             return False
-        if self.not_groups and app.group.casefold() in self.not_groups:
+        if self.not_groups and app.group.name in self.not_groups:
             return False
-        inst_name = (
-            app.instructions.installer_name().casefold()
-            if isinstance(app, AppRequest)
-            else None
-        )
+        if not isinstance(app, AppRequest):
+            # stems have no resolved installer: a positive installer filter can
+            # never match them (drop), a negative one has nothing to exclude (keep)
+            return not self.installers
+        inst_name = app.instructions.installer_name().casefold()
         if self.installers and inst_name not in self.installers:
             return False
         return not (self.not_installers and inst_name in self.not_installers)

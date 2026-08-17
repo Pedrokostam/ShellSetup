@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import inspect
 import re
 from functools import wraps
 from string import Formatter
 from time import perf_counter
 from typing import Any
-
-from python.color import wrap_color
 
 
 def timed(func):

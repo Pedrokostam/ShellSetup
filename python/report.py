@@ -1,19 +1,16 @@
 from __future__ import annotations
+
 import json
-from python.json_converter import JsonConverter
 import os
-import pprint
-import sys
-import tempfile
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 from pathlib import Path
-from typing import Any
 
 from python.color import Color, wrap_color
 from python.error import AppInstallError, InstallScriptError
 from python.filters import ComplexFilter
+from python.json_converter import JsonConverter
 
 from .app_request import AppRequest, AppRequestStem
 
@@ -292,7 +289,9 @@ class Report:
         target.parent.mkdir(exist_ok=True, parents=True)
         try:
             with target.open("+w") as f:
-                json.dump(list(self.app_logs.values()), f, indent=True, cls=JsonConverter)
+                json.dump(
+                    list(self.app_logs.values()), f, indent=True, cls=JsonConverter
+                )
         except PermissionError:
             print("\nREPORT GENERATION FAILED\n")
             p = json.dumps(list(self.app_logs.values()), indent=True, cls=JsonConverter)

@@ -1,0 +1,58 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "package_managers",
+   "platformInstallers": {
+      "any": {
+         "installers": [
+            {
+               "name": "npm",
+               "command": "npm install -g $name",
+               "elevated": {
+                  "default": true,
+                  "windows": null
+               }
+            }
+         ]
+      }
+   },
+   "apps": [
+      {
+         "name": "scoop",
+         "windows": {
+            "elevated": false,
+            "command": "powershell.exe -ExecutionPolicy RemoteSigned -Command \"Invoke-RestMethod -Uri 'https://get.scoop.sh' | Invoke-Expression\""
+         }
+      },
+      {
+         "name": "yay",
+         "windows": false,
+         "arch": {
+            "script": "arch_yay_install_script.sh",
+            "elevated": true
+         }
+      },
+      {
+         "name": "flatpak",
+         "linux": true
+      },
+      {
+         "name": "npm",
+         "windows": {
+            "name": "OpenJS.NodeJS"
+         },
+         "linux": {
+            "name": "nodejs npm"
+         }
+      },
+      {
+         "name": "uv",
+         "windows": {
+            "name": "astral-sh.uv"
+         },
+         "linux": {
+            "elevated": false,
+            "command": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+         }
+      }
+   ]
+}

@@ -1,0 +1,66 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "cli",
+   "apps": [
+      {
+         "name": "oh-my-posh",
+         "windows": true,
+         "linux": {
+            "command": "curl -s https://ohmyposh.dev/install.sh | bash -s"
+         }
+      },
+      {
+         "name": "fastfetch",
+         "windows": {
+            "name": "Fastfetch-cli.Fastfetch"
+         },
+         "linux": true
+      },
+      {
+         "name": "jq",
+         "windows": {
+            "name": "jqlang.jq"
+         },
+         "linux": true
+      },
+      {
+         "name": "yazi",
+         "windows": {
+            "name": "sxyazi.yazi"
+         },
+         "arch": true,
+         "debian": {
+            "script": "debian_yazi_install_script.sh",
+            "elevated": true
+         },
+         "fedora": {
+            "script": "fedora_yazi_install_script.sh"
+         }
+      },
+      {
+         "name": "ripgrep",
+         "checkName": "rg",
+         "windows": {
+            "name": "BurntSushi.ripgrep"
+         },
+         "linux": true
+      },
+      {
+         "name": "zoxide",
+         "windows": {
+            "name": "ajeetdsouza.zoxide"
+         },
+         "linux": {
+            "elevated": false,
+            "command": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+         }
+      },
+      {
+         "name": "fzf",
+         "windows": {
+            "name": "junegunn.fzf"
+         },
+         "linux": true
+      }
+   ]
+}

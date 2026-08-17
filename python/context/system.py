@@ -10,7 +10,6 @@ import tempfile
 import threading
 from pathlib import Path
 
-import python
 from python.printing import timed
 
 
@@ -124,6 +123,8 @@ def get_apps_from_managers() -> set[str]:
     return set()
 
 
+# TODO: make it accept multiple methods again, add npm check
+# Maybe define the procedure to check in json?
 class LazySet(collections.abc.Set):
     def __init__(self, target_function):
         self._data: set[str] = set()

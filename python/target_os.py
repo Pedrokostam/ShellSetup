@@ -4,7 +4,17 @@ from pathlib import Path
 
 from python.context.system import is_windows
 
-__all__ =['AnyOs', 'Arch', 'Debian', 'Fedora', 'Linux', 'OpenSuse', 'Ubuntu', 'Windows']
+__all__ = [
+    "AnyOs",
+    "Arch",
+    "Debian",
+    "Fedora",
+    "Linux",
+    "OpenSuse",
+    "Ubuntu",
+    "Windows",
+]
+
 
 class AnyOs:
     def __str__(self) -> str:
@@ -39,8 +49,8 @@ class AnyOs:
         return [cls for cls in type(self).mro() if cls is not object]
 
     def find_most_concrete_system(
-        self, available_systems: list[AnyOs|None]
-    ) -> AnyOs|None:
+        self, available_systems: list[AnyOs | None]
+    ) -> AnyOs | None:
         for applicable_os in self._get_matching_system_classes():
             for system_for_app in available_systems:
                 if isinstance(applicable_os(), type(system_for_app)):
@@ -128,5 +138,6 @@ def __detect_platform() -> AnyOs:
     if "suse" in ident:
         return OpenSuse()
     raise OSError(f"Unrecognized Linux OS: {osrel.get('ID', '?')}")
+
 
 CURRENT_PLATFORM = __detect_platform()

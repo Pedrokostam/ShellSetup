@@ -8,6 +8,10 @@
          "type": "string",
          "description": ""
       },
+      "defaultGroup": {
+         "$ref": "#/definitions/identifier",
+         "description": "Group assigned to apps in this file that don't specify one. If omitted, the group is derived from the file name."
+      },
       "platformInstallers": {
          "type": "object",
          "properties": {
@@ -63,7 +67,7 @@
                      },
                      {
                         "type": "boolean",
-                        "description": "Indicates whether to use app name when checking PATH for installed apps. Defaults to false."
+                        "description": "Indicates whether to use app name when checking PATH for installed apps. Defaults to true."
                      }
                   ]
                },

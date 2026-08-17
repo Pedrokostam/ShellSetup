@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from functools import total_ordering
 
 from python.app_group import DEFAULT_GROUP, AppGroup
 from python.color import Color
@@ -104,7 +103,7 @@ class AppRequest:
         )
 
     def simple_dict(self) -> dict:
-        dicto =self.to_stem().simple_dict()
+        dicto = self.to_stem().simple_dict()
         dicto["installer"] = self.instructions.installer_name()
         return dicto
 

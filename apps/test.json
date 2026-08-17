@@ -1,0 +1,24 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "test",
+   "apps": [
+      {
+         "name": "wingety____SDF",
+         "windows": {
+            "installer": "winget"
+         }
+      },
+      {
+         "name": "scoopy____SDf",
+         "windows": {
+            "installer": "scoop"
+         }
+      },
+      {
+         "name": "npmy_____asfd",
+         "any": {
+            "installer": "npm"
+         }
+      }
+   ]
+}

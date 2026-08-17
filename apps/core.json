@@ -1,0 +1,104 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "core",
+   "platformInstallers": {
+      "windows": {
+         "default": "winget",
+         "installers": [
+            {
+               "name": "winget",
+               "command": "winget install --id ${name} --accept-package-agreements -e --scope user -h --source winget",
+               "elevated": null
+            },
+            {
+               "name": "scoop",
+               "prepare": [
+                  "${NEWEST_POWERSHELL}",
+                  "-file",
+                  "~/scoop/shims/scoop.ps1",
+                  "-V"
+               ],
+               "command": [
+                  "${NEWEST_POWERSHELL}",
+                  "-file",
+                  "~/scoop/shims/scoop.ps1",
+                  "install",
+                  "$name",
+                  "--no-update-scoop"
+               ],
+               "elevated": false
+            }
+         ]
+      },
+      "debian": {
+         "installers": [
+            {
+               "name": "apt-get",
+               "command": "apt-get install --yes $name",
+               "elevated": true
+            }
+         ]
+      },
+      "fedora": {
+         "installers": [
+            {
+               "name": "dnf",
+               "command": "dnf install -y $name",
+               "elevated": true
+            }
+         ]
+      },
+      "opensuse": {
+         "installers": [
+            {
+               "name": "zypper",
+               "command": "zypper --non-interactive install $name",
+               "elevated": true
+            }
+         ]
+      },
+      "arch": {
+         "default": "pacman",
+         "installers": [
+            {
+               "name": "pacman",
+               "prepare": "pacman -Syq",
+               "command": "pacman -Sq --needed --noconfirm $name",
+               "elevated": true
+            },
+            {
+               "name": "yay",
+               "prepare": "yay -Syq",
+               "command": "yay -Sq --needed --noconfirm $name",
+               "elevated": true
+            }
+         ]
+      }
+   },
+   "apps": [
+      {
+         "name": "curl",
+         "linux": true,
+         "windows": {
+            "name": "cURL.cURL"
+         }
+      },
+      {
+         "name": "git",
+         "windows": {
+            "name": "Git.Git"
+         },
+         "linux": true
+      },
+      {
+         "name": "firefox",
+         "windows": {
+            "name": "Mozilla.Firefox"
+         },
+         "opensuse": {
+            "name": "MozillaFirefox"
+         },
+         "linux": true
+      }
+   ]
+}
