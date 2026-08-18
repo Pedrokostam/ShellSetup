@@ -4,9 +4,10 @@ import datetime
 import json
 import os
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import Enum, StrEnum, auto
 from pathlib import Path
+from typing import Any
 
 from python.color import Color, wrap_color
 from python.error import AppInstallError, InstallScriptError
@@ -74,7 +75,7 @@ class AppLog:
     status: Status
     details: str
     process_output: str | None
-    date: datetime.datetime = field(
+    date:datetime.datetime = field(
         default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc)
     )
 
@@ -93,6 +94,12 @@ class AppLog:
     @property
     def app_description(self) -> str | None:
         return self.app.description
+
+    def to_json(self)->dict[str,Any]:
+        d = asdict(self)
+        d['date'] = self.date.isoformat()
+        return d
+
 
 
 def remove_newline(s: str) -> str:
