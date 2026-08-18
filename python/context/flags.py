@@ -6,7 +6,7 @@ __DEBUG = []
 
 DEBUG_TIME = "time"
 DEBUG_MOCK_INSTALL = "install"
-
+PARSABLE_OUTPUT=False
 
 def set_debug(key: str | Sequence[str]):
     if isinstance(key, str):

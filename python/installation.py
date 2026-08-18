@@ -61,7 +61,7 @@ def debug_skip() -> str | None:
 
     if not flags.is_debug(flags.DEBUG_MOCK_INSTALL):
         return None
-    sleep(0.5 + random.random())
+    sleep(2.5 + 4*random.random())
     if random.random() > 0.4:
         return "Randomly passed"
     raise AppInstallError(problem="Randomly failed")
@@ -125,7 +125,7 @@ class Installer:
     def is_prepared(self):
         return is_installer_prepared(self.name)
 
-    @one_line_report(initial_msg="Preparing {self.name;YELLOW} - {self.prepare}… ")
+    @one_line_report(initial_msg="Preparing {self.name;YELLOW}… ")
     def prepare_installer(self) -> bool:
         if self.prepare is None:
             report_installer_prepared(self)

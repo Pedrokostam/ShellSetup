@@ -22,6 +22,7 @@ from python.filters import (
     Filters,
 )
 from python.overseer import Overseer
+from python.report import Report
 from python.target_os import CONCRETE_OS
 
 
@@ -60,7 +61,11 @@ def print_apps(
         case _:
             all_apps = overseer.all_installable_apps()
             title = f"all apps that can be installed on {target_os.CURRENT_PLATFORM}"
-    print("Listing " + title, file=sys.stderr)
+    if flags.PARSABLE_OUTPUT:
+        file = sys.stderr
+    else:
+        file = sys.stdout
+    print("Listing " + title, file=file)
     if as_json:
         print(json.dumps([x.simple_dict() for x in all_apps], indent=3))
     else:
@@ -69,11 +74,12 @@ def print_apps(
         logs.print_time_logs()
 
 
-def install(filters: Filters | ComplexFilter | None = None, no_report: bool = False):
+def install(filters: Filters | ComplexFilter | None = None, no_report: bool = False)->Report:
     overseer = Overseer.create_context(filters=filters)
     overseer.install()
     if not no_report:
         overseer.print_report()
+    return overseer.report
 
 
 if __name__ == "__main__":

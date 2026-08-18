@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import datetime
 import json
 import os
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, StrEnum, auto
 from pathlib import Path
 
@@ -73,6 +74,9 @@ class AppLog:
     status: Status
     details: str
     process_output: str | None
+    date: datetime.datetime = field(
+        default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc)
+    )
 
     @property
     def app_group(self) -> str:
@@ -284,6 +288,29 @@ class Report:
 
     def print(self, complex_filter: ComplexFilter | None = None):
         print_many(list(self.app_logs.values()), complex_filter)
+
+    def merge_reports(self, other_report: Report) -> Report:
+        if not self.app_logs:
+            return other_report
+        if not other_report.app_logs:
+            return self
+        oldest_date_self = min(x.date for x in self.app_logs.values())
+        oldest_date_other = min(x.date for x in other_report.app_logs.values())
+        if oldest_date_other is None and oldest_date_self is None:
+            # 2 empty reports
+            return Report()
+        newer_report = self if oldest_date_self > oldest_date_other else other_report
+        older_report = self if oldest_date_self < oldest_date_other else other_report
+
+        positive_older = {
+            k: v for k, v in older_report.app_logs.items() if v.status.is_installed()
+        }
+
+        out = Report()
+        out.app_logs = newer_report.app_logs.copy()
+        out.app_logs.update(positive_older)
+
+        return Report()
 
     def save_report(self, target: Path):
         target.parent.mkdir(exist_ok=True, parents=True)

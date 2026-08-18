@@ -176,7 +176,7 @@ def main() -> None:
     first_filters = ComplexFilter.coerce(
         [GroupFilter(x) for x in ["core", "core_linux", "package_managers", "shells"]]
     ).subtract(arg_filter)
-    install(filters=first_filters)
+    initial_report = install(filters=first_filters)
     print("\nRefreshing environment")
     system.refresh_PATH()
     system.refresh_manager_apps()
@@ -185,7 +185,8 @@ def main() -> None:
     setup_profiles()
     setup_pwsh_modules()
     setup_font()
-    install(filters)
+    second_report = install(filters)
+    initial_report.merge_reports(second_report).print()
     if flags.is_debug(flags.DEBUG_TIME):
         logs.print_time_logs()
 

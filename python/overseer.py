@@ -25,7 +25,7 @@ from python.installation import (
     Script,
     cache_sudo,
 )
-from python.printing import timed
+from python.printing import one_line_report, timed
 
 from .report import Report, Status
 from .target_os import *

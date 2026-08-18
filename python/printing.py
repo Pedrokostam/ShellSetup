@@ -4,10 +4,13 @@ import inspect
 import re
 from functools import wraps
 from string import Formatter
+import sys
+import threading
 from time import perf_counter
 from typing import Any
 
-from python.context import logs
+from python.color import Color
+from python.context import flags, logs
 
 
 def timed(func):
@@ -25,8 +28,9 @@ def timed(func):
             arguments = dict(bound.arguments)
             arguments.pop("self", None)
             arguments.pop("cls", None)
-            logs.add_time_log(func.__name__,arguments,duration)
+            logs.add_time_log(func.__name__, arguments, duration)
             # print(func.__name__, arguments, f" => {duration:.3f}s")
+
     return wrapper
 
 
@@ -100,6 +104,40 @@ class Lock:
 __LOCK = Lock()
 
 
+class RepeatingTask:
+    def __init__(
+        self,
+        start_point: float,
+        interval=1.0,
+    ):
+        self.start_point = start_point
+        self.interval = interval
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self._run)
+
+    def _run(self):
+        if flags.SILENT:
+            return
+        sys.stderr.write("\033[?25l")
+        sys.stderr.flush()
+        try:
+            while not self.stop_event.wait(self.interval):
+                point = perf_counter()
+                s = f"{(point - self.start_point):.2f} s"
+                sys.stderr.write(Color.BOLD.wrap(f"{s}{'\b' * len(s)}"))
+                sys.stderr.flush()
+        finally:
+            sys.stderr.write("\033[?25h")  # show cursor
+            sys.stderr.flush()
+
+    def start(self):
+        self.thread.start()
+
+    def stop(self):
+        self.stop_event.set()
+        self.thread.join()
+
+
 def one_line_report(
     initial_msg: str,
     ok: str | None = None,
@@ -111,18 +149,26 @@ def one_line_report(
             from python.color import Color
             from python.printing import conditional_print
 
+            if flags.PARSABLE_OUTPUT:
+                file = sys.stderr
+            else:
+                file = sys.stdout
+
             if __LOCK.locked:
                 return func(*args, **kwargs)
             __LOCK.locked = True
-            ok_msg = ok or Color.GREEN.wrap("SUCCESS")
-            nok_msg = nok or Color.RED.wrap("FAILURE")
+
+            ok_msg = ok if ok is not None else Color.GREEN.wrap("SUCCESS")
+            nok_msg = nok if nok is not None else Color.RED.wrap("FAILURE")
             sig = inspect.signature(func)
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
             arguments = dict(bound.arguments)
             msg = __rebuild_format(initial_msg, arguments)
-            conditional_print(msg, end="")
+            conditional_print(msg, end="", file=file)
             start = perf_counter()
+            live_print = RepeatingTask(start_point=start, interval=0.1)
+            live_print.start()
             try:
                 r = func(*args, **kwargs)
                 function_passed = True
@@ -132,9 +178,14 @@ def one_line_report(
                 raise
             finally:
                 end = perf_counter()
+                live_print.stop()
                 status_message = ok_msg if function_passed else nok_msg
-                conditional_print(f"{status_message} [{end - start:.3f}s]")
+                dur = f"{end-start:.2f} s"
+                conditional_print(
+                    f"{status_message} {Color.BRIGHT_CYAN.wrap(dur)}", file=file
+                )
                 __LOCK.locked = False
+                logs.add_time_log(func.__name__, arguments, end - start)
 
         return wrapper
 

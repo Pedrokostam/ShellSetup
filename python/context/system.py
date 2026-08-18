@@ -9,7 +9,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from python.printing import timed
+from python.printing import one_line_report, timed
 
 # Mutable caches, populated in a background thread and at runtime.
 __EXISTING_APPS_CALLABLE: dict[str, str | None] = {}
@@ -140,9 +140,10 @@ def get_apps_from_managers() -> set[str]:
 
 class LazySet(collections.abc.Set):
     def __init__(self, target_function):
+        self._target_function = target_function
         self._data: set[str] = set()
         self._thread = threading.Thread(
-            target=self._populate, args=(target_function,), daemon=True
+            target=self._populate, args=(self._target_function,), daemon=True
         )
         self._thread.start()
 
@@ -151,7 +152,7 @@ class LazySet(collections.abc.Set):
 
     def _wait(self):
         if self._thread.is_alive():
-            self._thread.join()
+            self._wait_reported()
 
     def __contains__(self, item):
         self._wait()
@@ -165,7 +166,15 @@ class LazySet(collections.abc.Set):
         self._wait()
         return len(self._data)
 
+    @one_line_report("Detecting already installed apps… ",ok='')
+    def _wait_reported(self):
+        self._thread.join()
+
     def refresh(self):
+        self._data: set[str] = set()
+        self._thread = threading.Thread(
+            target=self._populate, args=(self._target_function,), daemon=True
+        )
         self._thread.start()
 
 
@@ -222,6 +231,7 @@ def is_app_installed(app: str) -> bool:
 
 def refresh_manager_apps():
     __EXISTING_APPS_MANAGERS.refresh()
+
 
 NEWEST_POWERSHELL_ENV = "NEWEST_POWERSHELL"
 if p7 := which("pwsh"):

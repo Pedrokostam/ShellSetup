@@ -123,6 +123,8 @@ def apply_flags(namespace: argparse.Namespace):
         target_os.CURRENT_PLATFORM = target_os.get_system_from_string(
             namespace.override_os
         )
+    if hasattr(namespace, "json") and namespace.json:
+        flags.PARSABLE_OUTPUT=True
 
 
 def parse_install_app(description: str | None) -> Filters | ListArgs:
