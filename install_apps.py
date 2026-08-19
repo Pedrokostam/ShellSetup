@@ -74,9 +74,15 @@ def print_apps(
         logs.print_time_logs()
 
 
-def install(filters: Filters | ComplexFilter | None = None, no_report: bool = False)->Report:
+def install(
+    filters: Filters | ComplexFilter | None = None, no_report: bool = False
+) -> Report:
     overseer = Overseer.create_context(filters=filters)
-    overseer.install()
+    try:
+        overseer.install()
+    except KeyboardInterrupt:
+        overseer.print_report()
+        raise
     if not no_report:
         overseer.print_report()
     return overseer.report

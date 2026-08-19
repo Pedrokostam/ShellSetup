@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 from install_apps import install
+from python import extprocess
 from python.arguments import parse_setup
 from python.color import Color, wrap_color
 from python.context import flags, logs, paths, system
@@ -24,12 +26,10 @@ def pwsh_exe() -> str | None:
     return os.getenv(NEWEST_POWERSHELL_ENV)
 
 
-def run(
-    cmd, capture: bool = True, shell: bool = False
-) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        cmd, capture_output=capture, text=True, shell=shell, check=False
-    )
+def run(cmd, shell: bool = False) -> subprocess.CompletedProcess[str]:
+    if shell:
+        return extprocess.run_shell(cmd)
+    return extprocess.run(cmd)
 
 
 def confirm(prompt: str, assume_yes: bool) -> bool:
@@ -91,11 +91,10 @@ def setup_font() -> None:
                     "Where-Object { $_.Name -ilike '*FantasqueSans*' }"
                 ),
             ],
-            capture=True,
         )
         found = bool(out.stdout.strip())
     else:
-        out = run("fc-list | grep -i FantasqueSans", capture=True, shell=True)
+        out = run("fc-list | grep -i FantasqueSans", shell=True)
         found = bool(out.stdout.strip())
     if found:
         print(wrap_color("Font is already installed", Color.CYAN))
@@ -134,9 +133,7 @@ def add_to_powershell_profile(powershell_exe: str):
             file=sys.stderr,
         )
         return
-    profile_path = run(
-        [pwsh, "-NoProfile", "-Command", "$PROFILE"], capture=True
-    ).stdout.strip()
+    profile_path = run([pwsh, "-NoProfile", "-Command", "$PROFILE"]).stdout.strip()
     custom = (paths.SHELL_SETUP_DIR / "pwsh" / "Profile_Kostam.ps1").resolve()
     append_once(Path(profile_path), f". '{custom}'", marker="Profile_Kostam.ps1")
 
@@ -176,6 +173,7 @@ def main() -> None:
     first_filters = ComplexFilter.coerce(
         [GroupFilter(x) for x in ["core", "core_linux", "package_managers", "shells"]]
     ).subtract(arg_filter)
+    print(first_filters)
     initial_report = install(filters=first_filters)
     print("\nRefreshing environment")
     system.refresh_PATH()

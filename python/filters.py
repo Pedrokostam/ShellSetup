@@ -98,10 +98,30 @@ class ComplexFilter:
             return False
         return not (self.not_installers and inst_name in self.not_installers)
 
-    def subtract(self, subtract_from: 'ComplexFilter'):
+    def subtract(self, subtract_from: "ComplexFilter") -> "ComplexFilter":
         """
         Addes negative filters from the other complex filter
         """
-        self.not_names.union(subtract_from.not_names)
-        self.not_groups.union(subtract_from.not_groups)
-        self.not_installers.union(subtract_from.not_installers)
+        out = ComplexFilter([])
+        out.names = self.names
+        out.groups = self.groups
+        out.installers = self.installers
+        out.not_names = self.not_names.union(subtract_from.not_names)
+        out.not_groups = self.not_groups.union(subtract_from.not_groups)
+        out.not_installers = self.not_installers.union(subtract_from.not_installers)
+        return out
+
+    def __str__(self):
+        l = [
+            z
+            for x in [
+                self.names,
+                self.groups,
+                self.installers,
+                self.not_names,
+                self.not_groups,
+                self.not_installers,
+            ]
+            for z in list(x)
+        ]
+        return ", ".join(l)

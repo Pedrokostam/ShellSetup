@@ -34,7 +34,16 @@
          "installers": [
             {
                "name": "apt-get",
-               "command": "apt-get install --yes $name",
+               "prepare": [
+                  "apt-get",
+                  "update"
+               ],
+               "command": [
+                  "apt-get",
+                  "install",
+                  "--yes",
+                  "$name"
+               ],
                "elevated": true
             }
          ]
@@ -43,7 +52,12 @@
          "installers": [
             {
                "name": "dnf",
-               "command": "dnf install -y $name",
+               "command": [
+                  "dnf",
+                  "install",
+                  "-y",
+                  "$name"
+               ],
                "elevated": true
             }
          ]
@@ -52,7 +66,16 @@
          "installers": [
             {
                "name": "zypper",
-               "command": "zypper --non-interactive install $name",
+               "prepare": [
+                  "zypper",
+                  "refresh"
+               ],
+               "command": [
+                  "zypper",
+                  "--non-interactive",
+                  "install",
+                  "$name"
+               ],
                "elevated": true
             }
          ]
@@ -62,14 +85,32 @@
          "installers": [
             {
                "name": "pacman",
-               "prepare": "pacman -Syq",
-               "command": "pacman -Sq --needed --noconfirm $name",
+               "prepare": [
+                  "pacman",
+                  "-Syq"
+               ],
+               "command": [
+                  "pacman",
+                  "-Sq",
+                  "--needed",
+                  "--noconfirm",
+                  "$name"
+               ],
                "elevated": true
             },
             {
                "name": "yay",
-               "prepare": "yay -Syq",
-               "command": "yay -Sq --needed --noconfirm $name",
+               "prepare": [
+                  "yay",
+                  "-Syq"
+               ],
+               "command": [
+                  "yay",
+                  "-Sq",
+                  "--needed",
+                  "--noconfirm",
+                  "$name"
+               ],
                "elevated": true
             }
          ]

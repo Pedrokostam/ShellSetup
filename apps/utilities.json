@@ -21,6 +21,9 @@
          "windows": {
             "name": "sharkdp.fd"
          },
+         "debian": {
+            "name": "fd-find"
+         },
          "linux": true
       },
       {

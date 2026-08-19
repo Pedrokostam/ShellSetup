@@ -9,7 +9,7 @@ from time import sleep
 from typing import Literal, TypeVar
 
 # from python import context
-from python import printing, target_os
+from python import extprocess, printing, target_os
 from python.cmd_parts import CmdParts
 from python.color import Color
 from python.context import flags, paths, system
@@ -33,10 +33,7 @@ def _raise_if_none(val: T | None, name: str = "Value") -> T:
 
 
 def is_sudo_cached() -> bool:
-    return (
-        subprocess.run(["sudo", "-Nnv"], capture_output=True, check=False).returncode
-        == 0
-    )
+    return extprocess.run(["sudo", "-Nnv"]).returncode == 0
 
 
 def cache_sudo(caller: str | None = None):
@@ -44,14 +41,11 @@ def cache_sudo(caller: str | None = None):
         return
     if is_sudo_cached():
         return
-    sudo_cached_result = subprocess.run(
-        ["sudo", "-Nnv"], capture_output=True, check=False
-    )
-    if sudo_cached_result.returncode != 0:
+    if not is_sudo_cached():
         if caller:
             print(f"{Color.YELLOW.wrap(caller)} requires sudo")
         try:
-            subprocess.run(["sudo", "-v"], check=True)  # sudo validate
+            extprocess.run_interactive(["sudo", "-v"], check=True)  # sudo validate
         except subprocess.CalledProcessError:
             raise AppInstallError(problem="Sudo authentication failed")
 
@@ -61,7 +55,7 @@ def debug_skip() -> str | None:
 
     if not flags.is_debug(flags.DEBUG_MOCK_INSTALL):
         return None
-    sleep(2.5 + 4*random.random())
+    sleep(2.5 + 4 * random.random())
     if random.random() > 0.4:
         return "Randomly passed"
     raise AppInstallError(problem="Randomly failed")
@@ -136,16 +130,8 @@ class Installer:
 
         if a := debug_skip():
             return bool(a)
-
-        printing.conditional_print(f"Preparing {self.name}... ", end="")
-        if not flags.SILENT:
-            print(f"Preparing {self.name}... ", end="")
-        result = subprocess.run(
-            self.prepare.parts,
-            shell=False,
-            check=False,
-            capture_output=True,
-            timeout=TIMEOUT,
+        result = extprocess.run(
+            self.prepare, prepend_sudo=self.elevation_required == True
         )
         success = result.returncode == 0
         report_installer(self, success)
@@ -174,29 +160,7 @@ class Installer:
             #     ready_cmd = ["cmd.exe", "/c"] + ready_cmd+[]
             # else:
             ready_cmd[0] = full_exe_path
-        if elevation_required and not system.IS_ELEVATED:
-            if target_os.is_windows():
-                # look like its too complicate to bother
-                raise AppInstallError(
-                    problem="Cannot elevate a Windows installer. Rerun the script with elevation.",
-                )
-            else:
-                if not is_sudo_cached():
-                    raise AppInstallError(problem="Sudo authentication failed")
-                ready_cmd = ["sudo", "-n"] + ready_cmd  # add sudo non-interactive
-        elif elevation_required == False and system.IS_ELEVATED:
-            raise AppInstallError(
-                problem="Installing the app requires non-elevated user"
-            )
-
-        result = subprocess.run(
-            ready_cmd,
-            shell=False,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=TIMEOUT,
-        )
+        result = extprocess.run(ready_cmd, prepend_sudo=elevation_required == True)
         if result.returncode != 0:
             err_msg = (
                 result.stderr.strip()
@@ -224,13 +188,8 @@ class Command:
     def execute(self) -> str:
         if a := debug_skip():
             return a
-        result = subprocess.run(
+        result = extprocess.run_shell(
             self.cmd,
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=TIMEOUT,
         )
         if result.returncode != 0:
             if result.stderr:
@@ -240,34 +199,8 @@ class Command:
         return str(result.stdout)
 
 
-# def _read_shebang(file: Path):
-#     with file.open() as f:
-#         # read, skipping empty lines
-#         while not (line := f.readline().strip()):
-#             if line.startswith("#!"):
-#                 shebang_cmd = line.replace("#!", "")
-#             else:
-#                 # first non-empty line not a shebang, abandon search
-#                 shebang_cmd = None
-#             break
-#         else:
-#             shebang_cmd = None
-#         if system.is_windows():
-#             default_shell = os.environ.get("COMSPEC")
-#         else:
-#             default_shell = os.environ.get("SHELL")
-#         if not shebang_cmd:
-#             return default_shell
-#         res = subprocess.run(
-#             shebang_cmd.split(" "),text=True, shell=False, capture_output=True, check=False
-#         )
-#         if res.returncode==0:
-#             return res.stdout
-#         return default_shell
-
-
 def ensure_executable(path: Path):
-    subprocess.run(["sudo", "chmod", "+x", str(path)], capture_output=True, check=False)
+    extprocess.run(["chmod", "+x", str(path)], prepend_sudo=True)
 
 
 @dataclass
@@ -301,14 +234,7 @@ class Script:
             raise AppInstallError(problem=f"script file {self.script_path} not found")
         if not system.is_windows():
             ensure_executable(abs_path)
-        result = subprocess.run(
-            str(abs_path),
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=TIMEOUT,
-        )
+        result = extprocess.run_shell(str(abs_path))
         if result.returncode != 0:
             if result.stderr:
                 raise AppInstallError(problem=str(result.stderr))

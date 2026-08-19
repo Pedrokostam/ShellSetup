@@ -41,7 +41,7 @@
             "name": "OpenJS.NodeJS"
          },
          "linux": {
-            "name": "nodejs npm"
+            "name": "npm"
          }
       },
       {

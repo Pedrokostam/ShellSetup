@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -25,22 +24,10 @@ from python.installation import (
     Script,
     cache_sudo,
 )
-from python.printing import one_line_report, timed
+from python.printing import timed
 
 from .report import Report, Status
 from .target_os import *
-
-
-def is_elevated() -> bool:
-    if os.name == "nt":
-        import ctypes
-
-        try:
-            return bool(ctypes.windll.shell32.IsUserAnAdmin())
-        except OSError:
-            return False
-    return os.geteuid() == 0
-
 
 K_DEF_GROUP = "defaultGroup"
 K_PLT_INST = "platformInstallers"

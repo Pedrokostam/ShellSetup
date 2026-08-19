@@ -5,12 +5,14 @@ ENV TZ=Europe/Warsaw
 
 RUN apt-get update \
     && apt-get install -y \
+        coreutils \
         sudo \
         bash \
         ca-certificates \
         curl \
         git \
         tzdata \
+        python3 \
     && useradd -m -s /bin/bash test \
     && echo 'test ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/test \
     && chmod 0440 /etc/sudoers.d/test \

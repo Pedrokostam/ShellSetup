@@ -9,6 +9,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+from python import extprocess
 from python.printing import one_line_report, timed
 
 # Mutable caches, populated in a background thread and at runtime.
@@ -19,11 +20,25 @@ def is_windows() -> bool:
     return os.name == "nt"
 
 
+def is_elevated() -> bool:
+    if os.name == "nt":
+        import ctypes
+
+        try:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        except OSError:
+            return False
+    return os.geteuid() == 0
+
+
+IS_ELEVATED = is_elevated()
+
+
 def run_lines(cmd: list[str]) -> set[str]:
     if not which(cmd[0]):
         return set()
     try:
-        out = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        out = extprocess.run(cmd, check=True)
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         print(f"{cmd[0]} error: {e}", file=sys.stderr)
         return set()
@@ -50,12 +65,8 @@ def npm_existing() -> set[str]:
     if not which("npm"):
         return set()
     try:
-        out = subprocess.run(
-            "npm list --global --depth=0 --json",
-            shell=True,
-            capture_output=True,
-            check=True,
-            text=True,
+        out = extprocess.run_shell(
+            "npm list --global --depth=0 --json", check=True
         )
         npm_json: dict = json.loads(out.stdout)
         return set(npm_json.get("dependencies", {}).keys())
@@ -69,9 +80,7 @@ def scoop_existing() -> set[str]:
     if not which("scoop"):
         return set()
     # scoop is a shim on Windows; shell=True resolves it via PATHEXT.
-    out = subprocess.run(
-        "scoop export", capture_output=True, text=True, shell=True, check=False
-    )
+    out = extprocess.run_shell("scoop export")
     try:
         data = json.loads(out.stdout)
         return {a["Name"] for a in data.get("apps", [])}
@@ -86,7 +95,7 @@ def winget_existing() -> set[str]:
         return set()
     ids = set()
     tmp = Path(tempfile.gettempdir()) / "winget_export.json"
-    subprocess.run(
+    extprocess.run(
         [
             "winget",
             "export",
@@ -97,9 +106,6 @@ def winget_existing() -> set[str]:
             "--disable-interactivity",
             "--accept-source-agreements",
         ],
-        capture_output=True,
-        text=True,
-        check=False,
     )
     try:
         if tmp.exists():
@@ -166,7 +172,7 @@ class LazySet(collections.abc.Set):
         self._wait()
         return len(self._data)
 
-    @one_line_report("Detecting already installed apps… ",ok='')
+    @one_line_report("Detecting already installed apps… ", ok="")
     def _wait_reported(self):
         self._thread.join()
 
@@ -204,9 +210,10 @@ def refresh_PATH():
     else:
         shell = os.environ.get("SHELL", "/bin/bash")
         new_path = subprocess.check_output(
-            [shell, "-lc", "echo $PATH"], text=True
+            [shell, "-c", "python3 -c \"import os; print(os.environ['PATH'])\""],
+            text=True,
         ).strip()
-        os.environ["PATH"] = new_path
+        os.environ["PATH"] = os.environ["PATH"] + ":" + new_path
     none_keys = [k for k, v in __EXISTING_APPS_CALLABLE.items() if v is None]
     for key in none_keys:
         del __EXISTING_APPS_CALLABLE[key]
