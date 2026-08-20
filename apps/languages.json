@@ -1,0 +1,27 @@
+{
+   "$schema": "./schema.json",
+   "defaultGroup": "package_managers",
+   "platformInstallers": {
+      "any": {
+         "installers": [
+            {
+               "name": "cargo",
+               "command": [
+                  "cargo",
+                  "install",
+                  "$name"
+               ]
+            }
+         ]
+      }
+   },
+   "apps": [
+      {
+         "name": "rust",
+         "checkName": "cargo",
+         "linux": {
+            "command": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+         }
+      }
+   ]
+}

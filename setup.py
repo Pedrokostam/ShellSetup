@@ -171,7 +171,10 @@ def main() -> None:
     filters = parse_setup(__doc__)
     arg_filter = ComplexFilter.coerce(filters)
     first_filters = ComplexFilter.coerce(
-        [GroupFilter(x) for x in ["core", "core_linux", "package_managers", "shells"]]
+        [
+            GroupFilter(x)
+            for x in ["core", "core_linux", "package_managers", "shells", "languages"]
+        ]
     ).subtract(arg_filter)
     print(first_filters)
     initial_report = install(filters=first_filters)

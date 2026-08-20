@@ -6,7 +6,12 @@
          "installers": [
             {
                "name": "npm",
-               "command": "npm install -g $name",
+               "command": [
+                  "npm",
+                  "install",
+                  "-g",
+                  "$name"
+               ],
                "elevated": {
                   "default": true,
                   "windows": null
