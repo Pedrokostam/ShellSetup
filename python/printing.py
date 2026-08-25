@@ -11,6 +11,19 @@ from typing import Any
 
 from python.color import Color
 from python.context import flags, logs
+from python.stream_sink import StreamSink
+
+
+INDICATORS = [
+    "[=   ]",
+    "[ =  ]",
+    "[  = ]",
+    "[   =]",
+    "[  = ]",
+    "[ =  ]",
+]
+
+_LAST_LENGTH = 0
 
 
 def timed(func):
@@ -107,35 +120,48 @@ __LOCK = Lock()
 class RepeatingTask:
     def __init__(
         self,
+        message: str,
         start_point: float,
         interval=1.0,
     ):
+        self.initial_message = message
         self.start_point = start_point
         self.interval = interval
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self._run)
+        self.sink = StreamSink()
+        self._last_message: str | None = None
 
     def _run(self):
         if flags.SILENT:
             return
-        sys.stderr.write("\033[?25l")
-        sys.stderr.flush()
+        sys.stdout.write("\033[?25l")  # hide cursor
+        sys.stdout.flush()
         try:
             while not self.stop_event.wait(self.interval):
                 point = perf_counter()
-                s = f"{(point - self.start_point):.2f} s"
-                sys.stderr.write(Color.BOLD.wrap(f"{s}{'\b' * len(s)}"))
-                sys.stderr.flush()
+                duration = point - self.start_point
+                line = f"{self.initial_message}"
+                if self.sink.is_started():
+                    line = "{} {:.2f} s {}".format(  # noqa: UP032
+                        self.initial_message, duration,self.sink.indicator()
+                    )
+                else:
+                    line = "{} {:.2f} s".format(self.initial_message, duration)  # noqa: UP032
+                self._last_message = line
+                sys.stdout.write("\r" + line)
+                sys.stdout.flush()
         finally:
-            sys.stderr.write("\033[?25h")  # show cursor
-            sys.stderr.flush()
+            sys.stdout.write("\033[?25h")  # show cursor
+            sys.stdout.flush()
 
     def start(self):
         self.thread.start()
 
-    def stop(self):
+    def stop(self) -> int | None:
         self.stop_event.set()
         self.thread.join()
+        return len(self._last_message) if self._last_message else None
 
 
 def one_line_report(
@@ -156,8 +182,8 @@ def one_line_report(
 
             if __LOCK.locked:
                 return func(*args, **kwargs)
-            __LOCK.locked = True
 
+            __LOCK.locked = True
             ok_msg = ok if ok is not None else Color.GREEN.wrap("SUCCESS")
             nok_msg = nok if nok is not None else Color.RED.wrap("FAILURE")
             sig = inspect.signature(func)
@@ -165,9 +191,14 @@ def one_line_report(
             bound.apply_defaults()
             arguments = dict(bound.arguments)
             msg = __rebuild_format(initial_msg, arguments)
-            conditional_print(msg, end="", file=file)
+            # conditional_print(msg, end="", file=file)
             start = perf_counter()
-            live_print = RepeatingTask(start_point=start, interval=0.1)
+            live_print = RepeatingTask(start_point=start, interval=0.1, message=msg)
+            # if the func accepts kwargs
+            if any(
+                p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+            ):
+                kwargs["sink"] = live_print.sink
             live_print.start()
             try:
                 r = func(*args, **kwargs)
@@ -178,12 +209,15 @@ def one_line_report(
                 raise
             finally:
                 end = perf_counter()
-                live_print.stop()
+                padding = live_print.stop()
                 status_message = ok_msg if function_passed else nok_msg
-                dur = f"{end-start:.2f} s"
-                conditional_print(
-                    f"{status_message} {Color.BRIGHT_CYAN.wrap(dur)}", file=file
+                line = "{} {} {}".format(
+                    msg,
+                    Color.BRIGHT_CYAN.wrap(f"{end - start:.2f} s"),
+                    status_message,
                 )
+                line = f"\r{line:>{padding}}"
+                conditional_print(line, file=file)
                 __LOCK.locked = False
                 logs.add_time_log(func.__name__, arguments, end - start)
 

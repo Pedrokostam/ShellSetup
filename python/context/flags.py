@@ -19,7 +19,7 @@ def is_debug(key: str):
     return key in __DEBUG or "*" in __DEBUG
 
 
-__IS_REDIRECTED = not (sys.stdout.isatty() and sys.stderr.isatty())
+__IS_REDIRECTED = False # not (sys.stdout.isatty() and sys.stderr.isatty())
 NO_COLOR = __IS_REDIRECTED
 
 __OVERRIDE_ELEVATION_SETTING: dict[str, bool | None] = {}

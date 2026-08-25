@@ -26,10 +26,10 @@ def pwsh_exe() -> str | None:
     return os.getenv(NEWEST_POWERSHELL_ENV)
 
 
-def run(cmd, shell: bool = False) -> subprocess.CompletedProcess[str]:
+def run(cmd, shell: bool = False, **kwargs) -> subprocess.CompletedProcess[str]:
     if shell:
-        return extprocess.run_shell(cmd)
-    return extprocess.run(cmd)
+        return extprocess.run_shell(cmd, **kwargs)
+    return extprocess.run(cmd, **kwargs)
 
 
 def confirm(prompt: str, assume_yes: bool) -> bool:

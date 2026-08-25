@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 import os
+import shutil
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from enum import Enum, StrEnum, auto
@@ -75,7 +76,7 @@ class AppLog:
     status: Status
     details: str
     process_output: str | None
-    date:datetime.datetime = field(
+    date: datetime.datetime = field(
         default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc)
     )
 
@@ -95,11 +96,10 @@ class AppLog:
     def app_description(self) -> str | None:
         return self.app.description
 
-    def to_json(self)->dict[str,Any]:
+    def to_json(self) -> dict[str, Any]:
         d = asdict(self)
-        d['date'] = self.date.isoformat()
+        d["date"] = self.date.isoformat()
         return d
-
 
 
 def remove_newline(s: str) -> str:
@@ -183,9 +183,8 @@ def create_table_payload(app_logs: list[AppLog]):
 
     lengths = [tuple(len(x) for x in t[:-1]) for t in initial]
     non_details_width = sum([max(zi) for zi in zip(*lengths)])
-    space_for_details = (
-        os.get_terminal_size().columns - non_details_width - formatting_padding
-    )
+    terminal_size = shutil.get_terminal_size()
+    space_for_details = terminal_size.columns - non_details_width - formatting_padding
     return [crop_last_item_if_needed(x, space_for_details) for x in initial]
 
 

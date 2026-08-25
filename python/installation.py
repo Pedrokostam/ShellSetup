@@ -120,7 +120,7 @@ class Installer:
         return is_installer_prepared(self.name)
 
     @one_line_report(initial_msg="Preparing {self.name;YELLOW}… ")
-    def prepare_installer(self) -> bool:
+    def prepare_installer(self, **kwargs) -> bool:
         if self.prepare is None:
             report_installer_prepared(self)
             return True
@@ -131,14 +131,15 @@ class Installer:
         if a := debug_skip():
             return bool(a)
         result = extprocess.run(
-            self.prepare, prepend_sudo=self.elevation_required == True
+            self.prepare, prepend_sudo=self.elevation_required == True, **kwargs
         )
         success = result.returncode == 0
         report_installer(self, success)
         return success
 
     @one_line_report(initial_msg="Installing {app_name;MAGENTA} with {self.name}… ")
-    def execute(self, app_name: str) -> str:
+    def execute(self, app_name: str, **kwargs) -> str:
+        sleep(4)
         if a := debug_skip():
             return a
         elevation_required = flags.get_elevation_setting(
@@ -160,7 +161,9 @@ class Installer:
             #     ready_cmd = ["cmd.exe", "/c"] + ready_cmd+[]
             # else:
             ready_cmd[0] = full_exe_path
-        result = extprocess.run(ready_cmd, prepend_sudo=elevation_required == True)
+        result = extprocess.run(
+            ready_cmd, prepend_sudo=elevation_required == True, **kwargs
+        )
         if result.returncode != 0:
             err_msg = (
                 result.stderr.strip()

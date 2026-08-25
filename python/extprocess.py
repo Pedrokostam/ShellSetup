@@ -7,6 +7,7 @@ from typing import Literal, TypeAlias, overload
 from python import target_os
 from python.cmd_parts import CmdParts
 from python.error import AppInstallError
+from python.stream_sink import StreamSink
 
 _CMD: TypeAlias = str | CmdParts | Sequence[str]
 
@@ -47,6 +48,7 @@ def _convert_cmd(
         return cmd.to_single_string()
     return cmd.to_list()
 
+
 def run_interactive(
     cmd: _CMD,
     shell: bool = False,
@@ -72,7 +74,27 @@ def run(
     prepend_sudo: bool = False,
     check: bool = False,
     timeout: float = TIMEOUT,
+    **kwargs,
 ):
+    if (sink := kwargs.get("sink")) and isinstance(sink, StreamSink):
+        _cmd = _convert_cmd(cmd, shell=False, prepend_sudo=prepend_sudo)
+        pop = subprocess.Popen(
+            _cmd,
+            universal_newlines=False,
+            shell=False,
+            text=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        sink.start_capture(pop)
+        ret_code = pop.wait(timeout=timeout)
+        res = subprocess.CompletedProcess(
+            args=_cmd,
+            returncode=ret_code,
+            stdout=sink.dump_output(),
+            stderr=sink.dump_error(),
+        )
+        return res
     return subprocess.run(
         _convert_cmd(cmd, shell=False, prepend_sudo=prepend_sudo),
         shell=False,
@@ -83,12 +105,33 @@ def run(
         timeout=timeout,
     )
 
+
 def run_shell(
     cmd: _CMD,
     prepend_sudo: bool = False,
     check: bool = False,
     timeout: float = TIMEOUT,
+    **kwargs,
 ):
+    if (sink := kwargs.get("sink")) and isinstance(sink, StreamSink):
+        _cmd = _convert_cmd(cmd, shell=True, prepend_sudo=prepend_sudo)
+        pop = subprocess.Popen(
+            _cmd,
+            universal_newlines=False,
+            shell=True,
+            text=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        sink.start_capture(pop)
+        ret_code = pop.wait(timeout=timeout)
+        res = subprocess.CompletedProcess(
+            args=_cmd,
+            returncode=ret_code,
+            stdout=sink.dump_output(),
+            stderr=sink.dump_error(),
+        )
+        return res
     return subprocess.run(
         _convert_cmd(cmd, shell=True, prepend_sudo=prepend_sudo),
         shell=True,

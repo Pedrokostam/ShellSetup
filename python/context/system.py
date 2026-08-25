@@ -65,9 +65,7 @@ def npm_existing() -> set[str]:
     if not which("npm"):
         return set()
     try:
-        out = extprocess.run_shell(
-            "npm list --global --depth=0 --json", check=True
-        )
+        out = extprocess.run_shell("npm list --global --depth=0 --json", check=True)
         npm_json: dict = json.loads(out.stdout)
         return set(npm_json.get("dependencies", {}).keys())
     except Exception as e:  # noqa: BLE001
@@ -190,7 +188,11 @@ __EXISTING_APPS_MANAGERS = LazySet(get_apps_from_managers)
 def refresh_PATH():
     from python import target_os
 
-    if target_os.is_windows():
+    if sys.version_info[:2] >= (3, 14):
+        os.reload_environ()
+        return
+
+    if os.name == "nt":
         import winreg
 
         # Read System PATH
