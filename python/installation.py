@@ -139,7 +139,6 @@ class Installer:
 
     @one_line_report(initial_msg="Installing {app_name;MAGENTA} with {self.name}… ")
     def execute(self, app_name: str, **kwargs) -> str:
-        sleep(4)
         if a := debug_skip():
             return a
         elevation_required = flags.get_elevation_setting(
