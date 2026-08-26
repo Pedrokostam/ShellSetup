@@ -55,12 +55,14 @@ class StreamSink:
         self._thread_out: threading.Thread | None = None
         self._thread_err: threading.Thread | None = None
         self.indicators = indicators or [
-            "[=   ]",
-            "[ =  ]",
-            "[  = ]",
-            "[   =]",
-            "[  = ]",
-            "[ =  ]",
+            "[=-   ]",
+            "[-=-  ]",
+            "[ -=- ]",
+            "[  -=-]",
+            "[   -=]",
+            "[  -=-]",
+            "[ -=- ]",
+            "[-=-  ]",
         ]
         self._indicator_index = 0
         self.stats: SinkStat = SinkStat.new()

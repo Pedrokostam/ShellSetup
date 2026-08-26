@@ -187,12 +187,10 @@ class Command:
     @one_line_report(
         initial_msg="Installing {self.app_name;MAGENTA} with custom command… "
     )
-    def execute(self) -> str:
+    def execute(self, **kwargs) -> str:
         if a := debug_skip():
             return a
-        result = extprocess.run_shell(
-            self.cmd,
-        )
+        result = extprocess.run_shell(self.cmd, **kwargs)
         if result.returncode != 0:
             if result.stderr:
                 raise AppInstallError(problem=str(result.stderr))
@@ -228,7 +226,7 @@ class Script:
     @one_line_report(
         initial_msg="Installing {self.app_name;MAGENTA} with script {self.script_path;YELLOW}… "
     )
-    def execute(self) -> str:
+    def execute(self, **kwargs) -> str:
         if a := debug_skip():
             return a
         abs_path = (paths.AUXILIARY_INSTALL_SCRIPT_DIR / self.script_path).resolve()
@@ -236,7 +234,7 @@ class Script:
             raise AppInstallError(problem=f"script file {self.script_path} not found")
         if not system.is_windows():
             ensure_executable(abs_path)
-        result = extprocess.run_shell(str(abs_path))
+        result = extprocess.run_shell(str(abs_path), **kwargs)
         if result.returncode != 0:
             if result.stderr:
                 raise AppInstallError(problem=str(result.stderr))

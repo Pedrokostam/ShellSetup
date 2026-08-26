@@ -85,6 +85,7 @@ def run(
             text=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL
         )
         sink.start_capture(pop)
         ret_code = pop.wait(timeout=timeout)
@@ -122,6 +123,7 @@ def run_shell(
             text=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL
         )
         sink.start_capture(pop)
         ret_code = pop.wait(timeout=timeout)

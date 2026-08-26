@@ -143,11 +143,16 @@ class RepeatingTask:
                 duration = point - self.start_point
                 line = f"{self.initial_message}"
                 if self.sink.is_started():
-                    line = "{} {:.2f} s {}".format(  # noqa: UP032
-                        self.initial_message, duration,self.sink.indicator()
+                    line = "{} {}s {}".format(
+                        self.initial_message,
+                        Color.YELLOW.wrap(f"{duration:.2f}"),
+                        Color.BRIGHT_BLUE.wrap(self.sink.indicator()),
                     )
                 else:
-                    line = "{} {:.2f} s".format(self.initial_message, duration)  # noqa: UP032
+                    line = "{} {}s".format(
+                        self.initial_message,
+                        Color.YELLOW.wrap(f"{duration:.2f}"),
+                    )
                 self._last_message = line
                 sys.stdout.write("\r" + line)
                 sys.stdout.flush()
@@ -158,10 +163,10 @@ class RepeatingTask:
     def start(self):
         self.thread.start()
 
-    def stop(self) -> int | None:
+    def stop(self) -> int:
         self.stop_event.set()
         self.thread.join()
-        return len(self._last_message) if self._last_message else None
+        return len(self._last_message) if self._last_message else 1
 
 
 def one_line_report(
@@ -172,7 +177,6 @@ def one_line_report(
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from python.color import Color
             from python.printing import conditional_print
 
             if flags.PARSABLE_OUTPUT:
@@ -200,21 +204,24 @@ def one_line_report(
             ):
                 kwargs["sink"] = live_print.sink
             live_print.start()
+            function_status = nok_msg
             try:
                 r = func(*args, **kwargs)
-                function_passed = True
+                function_status = ok_msg
                 return r
-            except:
-                function_passed = False
+            except KeyboardInterrupt:
+                function_status = Color.RED.wrap("INTERRUPTED")
+                return None
+            except Exception:
+                function_status = nok_msg
                 raise
             finally:
                 end = perf_counter()
                 padding = live_print.stop()
-                status_message = ok_msg if function_passed else nok_msg
                 line = "{} {} {}".format(
                     msg,
                     Color.BRIGHT_CYAN.wrap(f"{end - start:.2f} s"),
-                    status_message,
+                    function_status,
                 )
                 line = f"\r{line:>{padding}}"
                 conditional_print(line, file=file)
