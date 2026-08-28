@@ -6,7 +6,7 @@ import sys
 import threading
 from functools import wraps
 from string import Formatter
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Any
 
 from python import color
@@ -153,6 +153,11 @@ class RepeatingTask:
         sys.stdout.flush()
         try:
             while not self.stop_event.wait(self.interval):
+                if self.sink.prompt_mode:
+                    sleep(0.25)
+                    self.sink.allow_prompt()
+                    sleep(0.25)
+                    continue
                 point = perf_counter()
                 duration = point - self.start_point
                 line = f"{self.initial_message}"
@@ -167,6 +172,7 @@ class RepeatingTask:
                         self.initial_message,
                         color.TIME_COLOR.wrap(f"{duration:.1f}s"),
                     )
+
                 self._last_message = line
                 sys.stdout.write("\r" + line)
                 sys.stdout.flush()
@@ -223,9 +229,6 @@ def one_line_report(
                 r = func(*args, **kwargs)
                 function_status = ok_msg
                 return r
-            except KeyboardInterrupt:
-                function_status = color.STATUS_NG_COLOR.wrap("INTERRUPTED")
-                return None
             except Exception:
                 function_status = nok_msg
                 raise

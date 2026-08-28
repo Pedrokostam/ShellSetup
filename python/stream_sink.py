@@ -65,6 +65,8 @@ class StreamSink:
         ]
         self._indicator_index = 0
         self.stats: SinkStat = SinkStat.new()
+        self.prompt_mode= False
+        self.can_prompt = False
 
     def _intercept(self, stream: IO[bytes], target: bytearray):
         while True:
@@ -121,6 +123,16 @@ class StreamSink:
             and bool(self._thread_err)
             and not self._thread_err.is_alive()
         )
+    def enter_prompt_mode(self):
+        self.prompt_mode=True
+        self.can_prompt=False
+
+    def allow_prompt(self):
+        self.can_prompt=True
+
+    def exit_prompt_mode(self):
+        self.prompt_mode=False
+        self.can_prompt=False
 
     def indicator(self) -> str:
         new_len = len(self.captured_out) + len(self.captured_err)

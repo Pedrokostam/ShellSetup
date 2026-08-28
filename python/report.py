@@ -334,7 +334,7 @@ class Report:
                     delete_on_close=False,
                     suffix=".json",
                 ) as temp_dir,
-                open(file=temp_dir.name,mode='w') as fallback_file,
+                open(file=temp_dir.name, mode="w") as fallback_file,
             ):
                 print(
                     f"\nREPORT GENERATION FAILED\nSAVING TO FALLBACK LOCATION: {temp_dir.name}\n",
@@ -347,7 +347,7 @@ class Report:
                         indent=True,
                         cls=JsonConverter,
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     print(f"\nFALLBACK REPORT FAILED\n{e}", file=stderr)
                     print(
                         json.dumps(
