@@ -9,9 +9,8 @@ from time import sleep
 from typing import Literal, TypeVar
 
 # from python import context
-from python import extprocess, printing, target_os
+from python import color, extprocess, target_os
 from python.cmd_parts import CmdParts
-from python.color import Color
 from python.context import flags, paths, system
 from python.error import AppInstallError
 from python.printing import one_line_report
@@ -43,7 +42,7 @@ def cache_sudo(caller: str | None = None):
         return
     if not is_sudo_cached():
         if caller:
-            print(f"{Color.YELLOW.wrap(caller)} requires sudo")
+            print(f"{color.WARNING_COLOR.wrap(caller)} requires sudo")
         try:
             extprocess.run_interactive(["sudo", "-v"], check=True)  # sudo validate
         except subprocess.CalledProcessError:

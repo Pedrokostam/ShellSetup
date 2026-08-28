@@ -1,40 +1,45 @@
-from collections.abc import Sequence
 from enum import Enum
+from typing import TypeAlias
 
 from python.context import flags
 
 
-class Color(Enum):
-    BLACK = "\033[30m"
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    MAGENTA = "\033[35m"
-    CYAN = "\033[36m"
-    WHITE = "\033[37m"
+class AnsiColor(Enum):
+    BLACK = 30
+    RED = 31
+    GREEN = 32
+    YELLOW = 33
+    BLUE = 34
+    MAGENTA = 35
+    CYAN = 36
+    WHITE = 37
 
-    BRIGHT_BLACK = "\033[90m"
-    BRIGHT_RED = "\033[91m"
-    BRIGHT_GREEN = "\033[92m"
-    BRIGHT_YELLOW = "\033[93m"
-    BRIGHT_BLUE = "\033[94m"
-    BRIGHT_MAGENTA = "\033[95m"
-    BRIGHT_CYAN = "\033[96m"
-    BRIGHT_WHITE = "\033[97m"
+    BRIGHT_BLACK = 90
+    BRIGHT_RED = 91
+    BRIGHT_GREEN = 92
+    BRIGHT_YELLOW = 93
+    BRIGHT_BLUE = 94
+    BRIGHT_MAGENTA = 95
+    BRIGHT_CYAN = 96
+    BRIGHT_WHITE = 97
 
     # Style Modifiers
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
+    BOLD = 1
+    UNDERLINE = 4
 
     # Reset Sequence
-    RESET = "\033[0m"
+    RESET = 0
+
+    def _command(self) -> str:
+        return str(self)[2:]
 
     def __str__(self):
-        """Allows direct usage in f-strings without typing '.value'."""
         if flags.NO_COLOR:
             return ""
-        return self.value
+        return f"\033[{self.value}m"
+
+    def _unwrap(self) -> "list[AnsiColor]":
+        return [self]
 
     def wrap(self, s: str) -> str:
         return wrap_color(s, self)
@@ -42,14 +47,56 @@ class Color(Enum):
     def print(self, s: str, *args, **kwargs):
         color_print(s, self, *args, **kwargs)
 
+    def __or__(self, value):
+        if isinstance(value, AnsiColor):
+            return ColorCombination(self, value)
+        if isinstance(value, ColorCombination):
+            return ColorCombination(self, *value.colors)
+        return NotImplemented
 
-def wrap_colors(s: str, colors: Sequence[Color]) -> str:
-    return f"{''.join(str(x) for x in colors)}{s}{Color.RESET}"
+
+class ColorCombination:
+    def __init__(self, *colors: "AnsiColor|ColorCombination"):
+        self.colors: list[AnsiColor] = [z for x in colors for z in x._unwrap()]
+
+    def __str__(self):
+        if flags.NO_COLOR:
+            return ""
+        return f"\033[{';'.join(str(c.value) for c in self.colors)}m"
+
+    def __or__(self, other):
+        if isinstance(other, AnsiColor):
+            return ColorCombination(*self.colors, other)
+        if isinstance(other, ColorCombination):
+            return ColorCombination(*self.colors, *other.colors)
+        return NotImplemented
+
+    def wrap(self, s: str) -> str:
+        return wrap_color(s, self)
+
+    def _unwrap(self) -> list[AnsiColor]:
+        return self.colors
+
+    def print(self, s: str, *args, **kwargs):
+        color_print(s, self, *args, **kwargs)
 
 
-def wrap_color(s: str, color: Color) -> str:
-    return f"{color}{s}{Color.RESET}"
+_Color: TypeAlias = AnsiColor | ColorCombination
 
 
-def color_print(s: str, color: Color, *args, **kwargs):
+def wrap_color(s: str, color: _Color) -> str:
+    return f"{color}{s}{AnsiColor.RESET}"
+
+
+def color_print(s: str, color: _Color, *args, **kwargs):
     print(wrap_color(s, color), *args, **kwargs)
+
+
+INSTALLER_COLOR = AnsiColor.MAGENTA
+TIME_COLOR = AnsiColor.BRIGHT_YELLOW
+STATUS_OK_COLOR = AnsiColor.GREEN
+STATUS_NG_COLOR = AnsiColor.RED
+STATUS_UK_COLOR = AnsiColor.RED
+INDICATOR_COLOR = AnsiColor.BRIGHT_CYAN
+APP_COLOR = AnsiColor.MAGENTA
+WARNING_COLOR = AnsiColor.YELLOW

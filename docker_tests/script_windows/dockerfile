@@ -1,0 +1,25 @@
+FROM mcr.microsoft.com/windows/servercore:ltsc2025
+
+SHELL ["powershell", "-NoProfile", "-Command"]
+
+ENV TZ=Europe/Warsaw
+
+RUN $ErrorActionPreference = 'Stop'; \
+    Set-TimeZone -Id 'Central European Standard Time'; \
+    Invoke-WebRequest \
+        -Uri 'https://community.chocolatey.org/install.ps1' \
+        -UseBasicParsing | Invoke-Expression
+
+RUN choco install -y git curl
+
+RUN New-LocalUser \
+        -Name 'test' \
+        -NoPassword \
+        -AccountNeverExpires \
+        -UserMayNotChangePassword; \
+    New-Item -ItemType Directory -Force C:\test | Out-Null
+
+USER test
+WORKDIR C:\test
+
+CMD ["powershell.exe"]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
+
 from python.context.system import is_windows
 
 __all__ = [

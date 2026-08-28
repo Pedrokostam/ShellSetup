@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Sequence
 
 SILENT = False
@@ -6,7 +5,8 @@ __DEBUG = []
 
 DEBUG_TIME = "time"
 DEBUG_MOCK_INSTALL = "install"
-PARSABLE_OUTPUT=False
+PARSABLE_OUTPUT = False
+
 
 def set_debug(key: str | Sequence[str]):
     if isinstance(key, str):
@@ -19,7 +19,7 @@ def is_debug(key: str):
     return key in __DEBUG or "*" in __DEBUG
 
 
-__IS_REDIRECTED = False # not (sys.stdout.isatty() and sys.stderr.isatty())
+__IS_REDIRECTED = False  # not (sys.stdout.isatty() and sys.stderr.isatty())
 NO_COLOR = __IS_REDIRECTED
 
 __OVERRIDE_ELEVATION_SETTING: dict[str, bool | None] = {}

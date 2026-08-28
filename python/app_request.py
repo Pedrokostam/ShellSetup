@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
+from python import color
 from python.app_group import DEFAULT_GROUP, AppGroup
-from python.color import Color
 from python.error import AppInstallError
 
 from .installation import Installer, InstallInstruction
@@ -17,9 +17,9 @@ def _pretty_dict(d: dict) -> str:
     max_l = max(len(x) for x in norm_keys)
     for k, v in d.items():
         if ("app" in k and "name" in k) or k == "name":
-            s = Color.CYAN.wrap(v)
+            s = color.APP_COLOR.wrap(v)
             if "installer" not in d:
-                s += Color.RED.wrap(" (non-installable)")
+                s += color.STATUS_NG_COLOR.wrap(" (non-installable)")
             l.append(s)
         elif isinstance(v, str):
             l.append(f"   {k:>{max_l}}: {v}")

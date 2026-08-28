@@ -25,12 +25,13 @@ def _normalize_part(s: str) -> str:
     s = ENV_FIND.sub(_replace_regex, s)
     return s
 
-def _bieda_escape(x:str)->str:
-    x=x.replace('"','\\"')
-    if ' ' in x:
-        x = '"'+x+'"'
+
+def _bieda_escape(x: str) -> str:
+    x = x.replace('"', '\\"')
+    if " " in x:
+        x = '"' + x + '"'
     return x
-    
+
 
 class CmdParts:
     def __init__(self, cmd: str | Sequence[str]):

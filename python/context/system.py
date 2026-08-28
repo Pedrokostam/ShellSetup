@@ -186,7 +186,6 @@ __EXISTING_APPS_MANAGERS = LazySet(get_apps_from_managers)
 
 
 def refresh_PATH():
-    from python import target_os
 
     if sys.version_info[:2] >= (3, 14):
         os.reload_environ()

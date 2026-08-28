@@ -1,8 +1,9 @@
 import argparse
+import sys
 from dataclasses import dataclass
 from enum import StrEnum, auto
-import sys
 
+from python import target_os
 from python.context import flags
 from python.filters import (
     Filters,
@@ -13,7 +14,6 @@ from python.filters import (
     NotInstallerFilter,
     NotNameFilter,
 )
-from python import target_os
 
 
 class ListType(StrEnum):
@@ -54,11 +54,10 @@ def _common_parser() -> argparse.ArgumentParser:
         "filters", "optional filtering based on name, group or installer"
     )
     filter_group.add_argument(
-        "--groups",
-        "-g",
-        nargs="*",
+        "names_pos",
+        nargs="?",
         default=[],
-        help="list of group names to choose, if a group is prepended with '!' the group is excluded instead",
+        help="list of filter names to choose; if a name is prepended with '!' the app is excluded instead",
     )
     filter_group.add_argument(
         "--names",
@@ -66,6 +65,13 @@ def _common_parser() -> argparse.ArgumentParser:
         nargs="*",
         default=[],
         help="list of filter names to choose; if a name is prepended with '!' the app is excluded instead",
+    )
+    filter_group.add_argument(
+        "--groups",
+        "-g",
+        nargs="*",
+        default=[],
+        help="list of group names to choose, if a group is prepended with '!' the group is excluded instead",
     )
     filter_group.add_argument(
         "--installers",
@@ -92,6 +98,7 @@ def get_filters(namespace: argparse.Namespace) -> Filters:
                 output.append(good(x))
 
     output = []
+    _inner(namespace.names_pos, NameFilter, NotNameFilter, output)
     _inner(namespace.names, NameFilter, NotNameFilter, output)
     _inner(namespace.groups, GroupFilter, NotGroupFilter, output)
     _inner(namespace.installers, InstallerFilter, NotInstallerFilter, output)
@@ -139,7 +146,7 @@ def parse_install_app(description: str | None) -> Filters | ListArgs:
     return filters
 
 
-def parse_setup(description: str|None) -> Filters:
+def parse_setup(description: str | None) -> Filters:
     parser = _get_parser(description)
     namespace = parser.parse_args()
     apply_flags(namespace)

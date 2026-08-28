@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 import subprocess
+from collections.abc import Sequence
 from typing import Literal, TypeAlias, overload
 
-from python import target_os
 from python.cmd_parts import CmdParts
 from python.error import AppInstallError
 from python.stream_sink import StreamSink
@@ -85,7 +84,7 @@ def run(
             text=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            stdin=subprocess.DEVNULL
+            stdin=subprocess.DEVNULL,
         )
         sink.start_capture(pop)
         ret_code = pop.wait(timeout=timeout)
@@ -123,7 +122,7 @@ def run_shell(
             text=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            stdin=subprocess.DEVNULL
+            stdin=subprocess.DEVNULL,
         )
         sink.start_capture(pop)
         ret_code = pop.wait(timeout=timeout)

@@ -6,9 +6,7 @@ This script is stdlib only and requires at least Python 3.9
 
 from __future__ import annotations
 
-import argparse
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -16,10 +14,10 @@ from pathlib import Path
 from install_apps import install
 from python import extprocess
 from python.arguments import parse_setup
-from python.color import Color, wrap_color
+from python.color import AnsiColor, wrap_color
 from python.context import flags, logs, paths, system
 from python.context.system import NEWEST_POWERSHELL_ENV, is_windows, which
-from python.filters import ComplexFilter, GroupFilter, NameFilter
+from python.filters import ComplexFilter, GroupFilter
 
 
 def pwsh_exe() -> str | None:
@@ -97,7 +95,7 @@ def setup_font() -> None:
         out = run("fc-list | grep -i FantasqueSans", shell=True)
         found = bool(out.stdout.strip())
     if found:
-        print(wrap_color("Font is already installed", Color.CYAN))
+        print(wrap_color("Font is already installed", AnsiColor.CYAN))
         return
     if not which("oh-my-posh"):
         print("Cannot install font (oh-my-posh missing)", file=sys.stderr)

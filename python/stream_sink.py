@@ -1,13 +1,12 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-import os
+
 import re
 import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
-from typing import IO, Any
+from dataclasses import dataclass
+from typing import IO
 
 CARRIAGE_RETURN = b"\r"
 NEWLINE = b"\n"

@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import inspect
 import re
-from functools import wraps
-from string import Formatter
 import sys
 import threading
+from functools import wraps
+from string import Formatter
 from time import perf_counter
 from typing import Any
 
-from python.color import Color
+from python import color
+from python.color import AnsiColor, ColorCombination, _Color
 from python.context import flags, logs
 from python.stream_sink import StreamSink
-
 
 INDICATORS = [
     "[=   ]",
@@ -73,8 +73,14 @@ def __get_atrs(expr: str, root_val: Any):
     return res
 
 
+def _find_color(color_name: str) -> _Color | None:
+    color_name = color_name.upper()
+    if c := getattr(color, color_name, None):
+        return c
+    return AnsiColor.__members__.get(color_name)
+
+
 def __rebuild_format(format_string: str, val_dict: dict):
-    from python.color import Color
 
     parts = []
     for literal, field, format_specifier, conversion in Formatter().parse(
@@ -84,9 +90,17 @@ def __rebuild_format(format_string: str, val_dict: dict):
         if field:
             field_col = field.split(";")
             field = field_col[0]
-            color = field_col[1] if len(field_col) > 1 else None
-            if color:
-                color = Color.__members__.get(color.upper())
+            format_color = field_col[1] if len(field_col) > 1 else None
+            format_colors = (
+                [_find_color(x) for x in format_color.split("|")]
+                if format_color
+                else None
+            )
+            if format_colors:
+                format_colors = [x for x in format_colors if x]
+                format_color = ColorCombination(*format_colors)
+            else:
+                format_color = None
 
             root_name = __get_root(field)
             if root_name not in val_dict:
@@ -103,8 +117,8 @@ def __rebuild_format(format_string: str, val_dict: dict):
                 final_final_value = ("{" + "".join(subparts) + "}").format(value)
             else:
                 final_final_value = str(value)
-            if color:
-                final_final_value = color.wrap(value)
+            if format_color:
+                final_final_value = format_color.wrap(value)
             parts.append(final_final_value)
     return "".join(parts)
 
@@ -143,15 +157,15 @@ class RepeatingTask:
                 duration = point - self.start_point
                 line = f"{self.initial_message}"
                 if self.sink.is_started():
-                    line = "{} {}s {}".format(
+                    line = "{} {} {}".format(
                         self.initial_message,
-                        Color.YELLOW.wrap(f"{duration:.2f}"),
-                        Color.BRIGHT_BLUE.wrap(self.sink.indicator()),
+                        color.TIME_COLOR.wrap(f"{duration:.1f}s"),
+                        color.INDICATOR_COLOR.wrap(self.sink.indicator()),
                     )
                 else:
-                    line = "{} {}s".format(
+                    line = "{} {}".format(
                         self.initial_message,
-                        Color.YELLOW.wrap(f"{duration:.2f}"),
+                        color.TIME_COLOR.wrap(f"{duration:.1f}s"),
                     )
                 self._last_message = line
                 sys.stdout.write("\r" + line)
@@ -188,8 +202,8 @@ def one_line_report(
                 return func(*args, **kwargs)
 
             __LOCK.locked = True
-            ok_msg = ok if ok is not None else Color.GREEN.wrap("SUCCESS")
-            nok_msg = nok if nok is not None else Color.RED.wrap("FAILURE")
+            ok_msg = ok if ok is not None else color.STATUS_OK_COLOR.wrap("SUCCESS")
+            nok_msg = nok if nok is not None else color.STATUS_NG_COLOR.wrap("FAILURE")
             sig = inspect.signature(func)
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
@@ -210,7 +224,7 @@ def one_line_report(
                 function_status = ok_msg
                 return r
             except KeyboardInterrupt:
-                function_status = Color.RED.wrap("INTERRUPTED")
+                function_status = color.STATUS_NG_COLOR.wrap("INTERRUPTED")
                 return None
             except Exception:
                 function_status = nok_msg
@@ -220,7 +234,7 @@ def one_line_report(
                 padding = live_print.stop()
                 line = "{} {} {}".format(
                     msg,
-                    Color.BRIGHT_CYAN.wrap(f"{end - start:.2f} s"),
+                    color.TIME_COLOR.wrap(f"{end - start:.1f} s"),
                     function_status,
                 )
                 line = f"\r{line:>{padding}}"

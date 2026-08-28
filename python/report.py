@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import datetime
 import json
-import os
 import shutil
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from enum import Enum, StrEnum, auto
 from pathlib import Path
+from sys import stderr
 from typing import Any
+import tempfile
 
-from python.color import Color, wrap_color
+from python import color
+from python.color import _Color, wrap_color
 from python.error import AppInstallError, InstallScriptError
 from python.filters import ComplexFilter
 from python.json_converter import JsonConverter
@@ -120,7 +122,7 @@ def crop_word(word: str, limit: int) -> str:
     return word
 
 
-def print_cells(cells: Sequence[tuple[str, int]], color: Color | None = None):
+def print_cells(cells: Sequence[tuple[str, int]], color: _Color | None = None):
     box = "│"
     contents = [f"{w:^{l}}" for w, l in cells[:-1]] + [
         f"{w:<{l}}" for w, l in cells[-1:]
@@ -211,16 +213,16 @@ def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
     print_border(LinePos.SEP, widths)
     for s, a in zip(strings, als):
         if a.status.is_installed():
-            color = Color.BRIGHT_GREEN
+            status_color = color.STATUS_OK_COLOR
         elif a.status.is_failure():
-            color = Color.RED
+            status_color = color.STATUS_NG_COLOR
         else:
-            color = Color.CYAN
+            status_color = color.STATUS_UK_COLOR
 
         cells = tuple(zip(s, widths))
         print_cells(
             cells,
-            color,
+            status_color,
         )
 
     print_border(LinePos.BOT, widths)
@@ -320,13 +322,37 @@ class Report:
 
     def save_report(self, target: Path):
         target.parent.mkdir(exist_ok=True, parents=True)
+        payload = list(self.app_logs.values())
         try:
             with target.open("+w") as f:
-                json.dump(
-                    list(self.app_logs.values()), f, indent=True, cls=JsonConverter
-                )
+                json.dump(payload, f, indent=True, cls=JsonConverter)
         except PermissionError:
-            print("\nREPORT GENERATION FAILED\n")
-            p = json.dumps(list(self.app_logs.values()), indent=True, cls=JsonConverter)
-            print(p)
-            print()
+            with (
+                tempfile.NamedTemporaryFile(
+                    prefix=target.stem,
+                    delete=False,
+                    delete_on_close=False,
+                    suffix=".json",
+                ) as temp_dir,
+                open(file=temp_dir.name,mode='w') as fallback_file,
+            ):
+                print(
+                    f"\nREPORT GENERATION FAILED\nSAVING TO FALLBACK LOCATION: {temp_dir.name}\n",
+                    file=stderr,
+                )
+                try:
+                    json.dump(
+                        payload,
+                        fp=fallback_file,
+                        indent=True,
+                        cls=JsonConverter,
+                    )
+                except Exception as e:
+                    print(f"\nFALLBACK REPORT FAILED\n{e}", file=stderr)
+                    print(
+                        json.dumps(
+                            payload,
+                            indent=True,
+                            cls=JsonConverter,
+                        )
+                    )

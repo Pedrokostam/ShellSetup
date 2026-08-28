@@ -1,0 +1,21 @@
+FROM opensuse/tumbleweed:latest
+
+ENV TZ=Europe/Warsaw
+
+RUN zypper --non-interactive refresh \
+    && zypper --non-interactive install \
+        sudo \
+        bash \
+        ca-certificates \
+        curl \
+        git \
+        timezone \
+    && useradd -m -s /bin/bash test \
+    && echo 'test ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/test \
+    && chmod 0440 /etc/sudoers.d/test \
+    && zypper clean --all
+
+USER test
+WORKDIR /test
+
+CMD ["bash"]
