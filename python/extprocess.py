@@ -1,10 +1,12 @@
 from __future__ import annotations
 import time
+import signal
 import subprocess
 from collections.abc import Sequence
 from typing import Any, Literal, TypeAlias, overload
 
 from python.cmd_parts import CmdParts
+from python.context.child_processes import add_child, remove_child
 from python.error import AppInstallError
 from python.stream_sink import StreamSink
 
@@ -84,16 +86,22 @@ def _monitor(
         while not sink.can_prompt:
             time.sleep(0.25)
             if time.perf_counter() - prompt_start > 10:
-                raise KeyboardInterrupt()
+                pass
+                # raise KeyboardInterrupt()
         inputted = input(
             "\nPress S to skip this command, Ctrl-C to abort the whole script"
             + " " * 30
         )
-        sink.exit_prompt_mode()
+        print(f"Input is '{inputted}'")
         if inputted.casefold() == "s":
+            print("killym")
             pop.kill()
             ret_code = pop.returncode
+            print(f"retocodo: {ret_code}")
+            sink.exit_prompt_mode()
             return ret_code
+        sink.exit_prompt_mode()
+        print("returning")
     return None
 
 
@@ -117,14 +125,18 @@ def _run(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.DEVNULL,
+        start_new_session=True,
     )
+    add_child(pop.pid)
     sink.start_capture(pop)
     start_time = time.perf_counter()
     ret_code = None
     while True:
-        ret_code = _monitor(pop, timeout, start_time,sink)
+        ret_code = _monitor(pop, timeout, start_time, sink)
+        print(" " * 60 + "rec_code->" + str(ret_code), end="")
         if ret_code is not None:
             break
+    remove_child(pop.pid)
     if check and ret_code != 0:
         raise subprocess.CalledProcessError(
             ret_code, pop.args, sink.dump_output(), sink.dump_error()
@@ -135,6 +147,7 @@ def _run(
         stdout=sink.dump_output(),
         stderr=sink.dump_error(),
     )
+    print(" " * 60 + "ret_code->" + str(ret_code), end="")
     return res
 
 

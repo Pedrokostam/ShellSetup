@@ -229,7 +229,8 @@ def one_line_report(
                 r = func(*args, **kwargs)
                 function_status = ok_msg
                 return r
-            except Exception:
+            except Exception as e:
+                print(e)
                 function_status = nok_msg
                 raise
             finally:

@@ -17,6 +17,7 @@ from python import target_os
 from python.app_request import AppRequest, AppRequestStem
 from python.arguments import ListArgs, ListType, parse_install_app
 from python.context import flags, logs
+from python.context.child_processes import toeten_die_kinder
 from python.filters import (
     ComplexFilter,
     Filters,
@@ -77,15 +78,19 @@ def print_apps(
 def install(
     filters: Filters | ComplexFilter | None = None, no_report: bool = False
 ) -> Report:
-    overseer = Overseer.create_context(filters=filters)
     try:
-        overseer.install()
-    except KeyboardInterrupt:
-        overseer.print_report()
-        raise
-    if not no_report:
-        overseer.print_report()
-    return overseer.report
+        overseer = Overseer.create_context(filters=filters)
+        try:
+            overseer.install()
+        except KeyboardInterrupt:
+            overseer.print_report()
+            raise
+        if not no_report:
+            overseer.print_report()
+        return overseer.report
+
+    finally:
+        toeten_die_kinder()
 
 
 if __name__ == "__main__":

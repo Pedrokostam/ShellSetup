@@ -3,6 +3,12 @@
    "defaultGroup": "test",
    "apps": [
       {
+         "name": "infinite wait",
+         "linux": {
+            "script": "infinite_wait.sh"
+         }
+      },
+      {
          "name": "wingety____SDF",
          "windows": {
             "installer": "winget"

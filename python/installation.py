@@ -163,11 +163,11 @@ class Installer:
             ready_cmd, prepend_sudo=elevation_required == True, **kwargs
         )
         if result.returncode != 0:
-            err_msg = (
+            err_msg ="XD: " +(
                 result.stderr.strip()
                 if result.stderr.strip()
                 else result.stdout.strip()
-            )
+            ) 
             raise AppInstallError(
                 problem=err_msg or f"Process exited with code {result.returncode}",
             )

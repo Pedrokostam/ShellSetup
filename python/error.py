@@ -1,3 +1,4 @@
+import traceback
 class InstallScriptError(Exception):
     def message(self) -> str:
         raise NotImplementedError("Subclasses must implement message()")
@@ -33,6 +34,7 @@ class AppInstallError(InstallScriptError):
     def __init__(self, problem: str):
         super().__init__(f"Install error: {problem}")
         self.problem = problem
+        traceback.print_stack()
 
     def message(self) -> str:
         return f"installation error: {self.problem}"
