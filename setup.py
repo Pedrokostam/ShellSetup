@@ -101,7 +101,7 @@ def setup_font() -> None:
         print("Cannot install font (oh-my-posh missing)", file=sys.stderr)
         return
     print("Installing font...")
-    run(["oh-my-posh", "font", "install", font])
+    extprocess.runndic(["oh-my-posh", "font", "install", font])
 
 
 def setup_omp():
@@ -120,7 +120,7 @@ def setup_pwsh_modules(no_modules: bool = False) -> None:
     script_path = str(
         (paths.SHELL_SETUP_DIR / "pwsh" / "Install-Modules.ps1").resolve()
     )
-    run([pwsh, "-NoProfile", "-File", script_path])
+    extprocess.run([pwsh, "-NoProfile", "-File", script_path])
 
 
 def add_to_powershell_profile(powershell_exe: str):
@@ -131,7 +131,10 @@ def add_to_powershell_profile(powershell_exe: str):
             file=sys.stderr,
         )
         return
-    profile_path = run([pwsh, "-NoProfile", "-Command", "$PROFILE"]).stdout.strip()
+    profile_path = extprocess.run(
+        [pwsh, "-NoProfile", "-Command", "(Get-Variable Profile).Value"]
+    ).stdout.strip()
+    print("PROFILE PATH: ", profile_path)
     custom = (paths.SHELL_SETUP_DIR / "pwsh" / "Profile_Kostam.ps1").resolve()
     append_once(Path(profile_path), f". '{custom}'", marker="Profile_Kostam.ps1")
 

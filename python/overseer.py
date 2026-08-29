@@ -13,6 +13,7 @@ from python.app_request import AppRequest, AppRequestStem
 from python.context import paths, system
 from python.error import (
     AppInstallError,
+    ExecutionSkippedError,
     InstallScriptError,
     JsonSyntaxError,
 )
@@ -331,6 +332,13 @@ class Overseer:
             ):
                 request.check_name = [*request.check_name, instruction.package_name]
             return request
+        except ExecutionSkippedError as x:
+            self.report.report_fail(
+                app=ars,
+                details=x,
+                status=Status.SKIPPED_INTERRUPTED,
+                process_output=x.stdout + x.stderr,
+            )
         except InstallScriptError as e:
             self.report.report_fail(app=ars, details=e, status=Status.FAILED)
             return None

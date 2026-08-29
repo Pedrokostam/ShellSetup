@@ -27,6 +27,7 @@ class Status(StrEnum):
     FAILED_INSTALLER_UNAVAILABLE = auto()
     SKIPPED_PLATFORM = auto()
     SKIPPED_CHOICE = auto()
+    SKIPPED_INTERRUPTED = auto()
     PREINSTALLED = auto()
     INSTALLED = auto()
 
@@ -62,6 +63,8 @@ class Status(StrEnum):
             return "Installed succesfully"
         if self == Status.PREINSTALLED:
             return "Already installed"
+        if self == Status.SKIPPED_INTERRUPTED:
+            return "Manually interrupted by user"
         if self == Status.SKIPPED_CHOICE:
             return "Manually skipped by user"
         if self == Status.SKIPPED_PLATFORM:

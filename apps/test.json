@@ -9,6 +9,12 @@
          }
       },
       {
+         "name": "infinite wait 2",
+         "linux": {
+            "script": "infinite_wait.sh"
+         }
+      },
+      {
          "name": "wingety____SDF",
          "windows": {
             "installer": "winget"

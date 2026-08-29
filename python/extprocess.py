@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 import time
 import signal
 import subprocess
@@ -7,7 +8,7 @@ from typing import Any, Literal, TypeAlias, overload
 
 from python.cmd_parts import CmdParts
 from python.context.child_processes import add_child, remove_child
-from python.error import AppInstallError
+from python.error import AppInstallError, ExecutionSkippedError
 from python.stream_sink import StreamSink
 
 _CMD: TypeAlias = str | CmdParts | Sequence[str]
@@ -72,12 +73,14 @@ def run_interactive(
 
 def _monitor(
     pop: subprocess.Popen[Any], timeout: float, start_time: float, sink: StreamSink
-):
+) -> int | None:
     try:
         ret_code = pop.poll()
         if ret_code is not None:
             return ret_code
         if time.perf_counter() - start_time > timeout:
+            pop.kill()
+            remove_child(pop.pid)
             raise subprocess.TimeoutExpired(pop.args, timeout=timeout)
         time.sleep(0.25)
     except KeyboardInterrupt:
@@ -85,23 +88,18 @@ def _monitor(
         prompt_start = time.perf_counter()
         while not sink.can_prompt:
             time.sleep(0.25)
-            if time.perf_counter() - prompt_start > 10:
-                pass
-                # raise KeyboardInterrupt()
-        inputted = input(
-            "\nPress S to skip this command, Ctrl-C to abort the whole script"
-            + " " * 30
-        )
-        print(f"Input is '{inputted}'")
-        if inputted.casefold() == "s":
-            print("killym")
-            pop.kill()
-            ret_code = pop.returncode
-            print(f"retocodo: {ret_code}")
+            if time.perf_counter() - prompt_start > 5:
+                sink.exit_prompt_mode()
+                break
+        else:
+            inputted = input(
+                    "\033[C\033[C\033[CCtrl-C detected: type S to skip this app, nothing to continue, Ctrl-C to abort the script: "
+            )
+            print("\033[A", end="")  # Go up one line
+            print("\033[2K", end="")  # Clear line
             sink.exit_prompt_mode()
-            return ret_code
-        sink.exit_prompt_mode()
-        print("returning")
+            if inputted.casefold() == "s":
+                raise ExecutionSkippedError(sink.dump_output(), sink.dump_error())
     return None
 
 
@@ -128,27 +126,44 @@ def _run(
         start_new_session=True,
     )
     add_child(pop.pid)
-    sink.start_capture(pop)
     start_time = time.perf_counter()
-    ret_code = None
-    while True:
-        ret_code = _monitor(pop, timeout, start_time, sink)
-        print(" " * 60 + "rec_code->" + str(ret_code), end="")
-        if ret_code is not None:
-            break
-    remove_child(pop.pid)
-    if check and ret_code != 0:
-        raise subprocess.CalledProcessError(
-            ret_code, pop.args, sink.dump_output(), sink.dump_error()
+    # logfile_out = open("/tmp/loggol_err.log", "wb")
+    # logfile_err = open("/tmp/loggol_out.log", "wb")
+    # sink.file_out = logfile_out
+    # sink.file_err = logfile_err
+
+    sink.start_capture(pop)
+    try:
+        while True:
+            ret_code = _monitor(pop, timeout, start_time, sink)
+            if ret_code is not None:
+                break
+        if check and ret_code != 0:
+            raise subprocess.CalledProcessError(
+                ret_code, pop.args, sink.dump_output(), sink.dump_error()
+            )
+        res = subprocess.CompletedProcess(
+            args=_cmd,
+            returncode=ret_code,
+            stdout=sink.dump_output(),
+            stderr=sink.dump_error(),
         )
-    res = subprocess.CompletedProcess(
-        args=_cmd,
-        returncode=ret_code,
-        stdout=sink.dump_output(),
-        stderr=sink.dump_error(),
-    )
-    print(" " * 60 + "ret_code->" + str(ret_code), end="")
-    return res
+        return res
+    finally:
+        if pop.poll() is None:
+            pop.terminate()
+            term_wait_start = time.perf_counter()
+            while time.perf_counter() - term_wait_start < 5:
+                if pop.poll() is not None:
+                    break
+                time.sleep(0.5)
+            else:
+                pop.kill()
+        remove_child(pop.pid)
+        sink.file_err = None
+        sink.file_out = None
+        # logfile_out.close()
+        # logfile_err.close()
 
 
 def run(

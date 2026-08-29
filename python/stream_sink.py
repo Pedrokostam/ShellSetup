@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BufferedWriter, TextIOWrapper
 import re
 import subprocess
 import sys
@@ -42,6 +43,9 @@ class SinkStat:
             self.last_check_time = time.perf_counter()
         return self.last_check_result
 
+    def time_since_change(self) -> float:
+        return time.perf_counter() - self.last_check_time
+
 
 class StreamSink:
     ENCODING = "utf-8"
@@ -54,24 +58,32 @@ class StreamSink:
         self._thread_out: threading.Thread | None = None
         self._thread_err: threading.Thread | None = None
         self.indicators = indicators or [
-            "[=-   ]",
-            "[-=-  ]",
-            "[ -=- ]",
-            "[  -=-]",
-            "[   -=]",
-            "[  -=-]",
-            "[ -=- ]",
-            "[-=-  ]",
+            "██     █",
+            "█ █    █",
+            "█  █   █",
+            "█   █  █",
+            "█    █ █",
+            "█     ██",
+            "█    █ █",
+            "█   █  █",
+            "█  █   █",
+            "█ █    █",
         ]
         self._indicator_index = 0
         self.stats: SinkStat = SinkStat.new()
-        self.prompt_mode= False
+        self.prompt_mode = False
         self.can_prompt = False
+        self.file_out: BufferedWriter | None = None
+        self.file_err: BufferedWriter | None = None
 
-    def _intercept(self, stream: IO[bytes], target: bytearray):
+    def _intercept(
+        self, stream: IO[bytes], target: bytearray, file: BufferedWriter | None = None
+    ):
         while True:
             chunk_out = stream.read(8)
             target.extend(chunk_out)
+            if file:
+                file.write(chunk_out)
 
     def is_started(self) -> bool:
         return (bool(self._thread_out) and self._thread_out.is_alive()) or (
@@ -123,22 +135,29 @@ class StreamSink:
             and bool(self._thread_err)
             and not self._thread_err.is_alive()
         )
+
     def enter_prompt_mode(self):
-        self.prompt_mode=True
-        self.can_prompt=False
+        self.prompt_mode = True
+        self.can_prompt = False
 
     def allow_prompt(self):
-        self.can_prompt=True
+        self.can_prompt = True
 
     def exit_prompt_mode(self):
-        self.prompt_mode=False
-        self.can_prompt=False
+        self.prompt_mode = False
+        self.can_prompt = False
 
     def indicator(self) -> str:
         new_len = len(self.captured_out) + len(self.captured_err)
         if self.stats.update(new_len):
             self._indicator_index = (self._indicator_index + 1) % len(self.indicators)
-        return self.indicators[self._indicator_index]
+        elapsed = self.stats.time_since_change()
+        if elapsed > 10:
+            suffix = f" {elapsed:.1f}s"
+        else:
+            suffix = ""
+
+        return self.indicators[self._indicator_index] + suffix
 
 
 if __name__ == "__main__":

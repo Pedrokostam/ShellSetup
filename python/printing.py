@@ -12,6 +12,7 @@ from typing import Any
 from python import color
 from python.color import AnsiColor, ColorCombination, _Color
 from python.context import flags, logs
+from python.error import ExecutionSkippedError
 from python.stream_sink import StreamSink
 
 INDICATORS = [
@@ -144,7 +145,6 @@ class RepeatingTask:
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self._run)
         self.sink = StreamSink()
-        self._last_message: str | None = None
 
     def _run(self):
         if flags.SILENT:
@@ -154,9 +154,8 @@ class RepeatingTask:
         try:
             while not self.stop_event.wait(self.interval):
                 if self.sink.prompt_mode:
-                    sleep(0.25)
+                    sleep(0.1)
                     self.sink.allow_prompt()
-                    sleep(0.25)
                     continue
                 point = perf_counter()
                 duration = point - self.start_point
@@ -183,10 +182,9 @@ class RepeatingTask:
     def start(self):
         self.thread.start()
 
-    def stop(self) -> int:
+    def stop(self):
         self.stop_event.set()
         self.thread.join()
-        return len(self._last_message) if self._last_message else 1
 
 
 def one_line_report(
@@ -215,7 +213,6 @@ def one_line_report(
             bound.apply_defaults()
             arguments = dict(bound.arguments)
             msg = __rebuild_format(initial_msg, arguments)
-            # conditional_print(msg, end="", file=file)
             start = perf_counter()
             live_print = RepeatingTask(start_point=start, interval=0.1, message=msg)
             # if the func accepts kwargs
@@ -229,19 +226,21 @@ def one_line_report(
                 r = func(*args, **kwargs)
                 function_status = ok_msg
                 return r
-            except Exception as e:
-                print(e)
+            except ExecutionSkippedError:
+                function_status = color.STATUS_NG_COLOR.wrap("INTERRUPTED")
+                raise
+            except Exception:
                 function_status = nok_msg
                 raise
             finally:
                 end = perf_counter()
-                padding = live_print.stop()
+                live_print.stop()
                 line = "{} {} {}".format(
                     msg,
                     color.TIME_COLOR.wrap(f"{end - start:.1f} s"),
                     function_status,
                 )
-                line = f"\r{line:>{padding}}"
+                line = f"\r{line}\033[2k"
                 conditional_print(line, file=file)
                 __LOCK.locked = False
                 logs.add_time_log(func.__name__, arguments, end - start)
