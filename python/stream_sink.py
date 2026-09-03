@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from io import BufferedWriter, TextIOWrapper
 import re
 import subprocess
 import sys
 import threading
 import time
 from dataclasses import dataclass
+from io import BufferedWriter
 from typing import IO
 
 CARRIAGE_RETURN = b"\r"
@@ -58,16 +58,14 @@ class StreamSink:
         self._thread_out: threading.Thread | None = None
         self._thread_err: threading.Thread | None = None
         self.indicators = indicators or [
-            "██     █",
-            "█ █    █",
-            "█  █   █",
-            "█   █  █",
-            "█    █ █",
-            "█     ██",
-            "█    █ █",
-            "█   █  █",
-            "█  █   █",
-            "█ █    █",
+            "█   ",
+            "▄▄  ",
+            " ▄▄ ",
+            "  ▄▄",
+            "   █",
+            "  ▀▀",
+            " ▀▀ ",
+            "▀▀  ",
         ]
         self._indicator_index = 0
         self.stats: SinkStat = SinkStat.new()
