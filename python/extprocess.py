@@ -1,8 +1,7 @@
 from __future__ import annotations
-from dataclasses import dataclass
-import time
-import signal
+
 import subprocess
+import time
 from collections.abc import Sequence
 from typing import Any, Literal, TypeAlias, overload
 
@@ -33,7 +32,7 @@ def _convert_cmd(
 
 
 def _convert_cmd(
-    cmd: _CMD, shell: bool = False, prepend_sudo: bool = False
+    cmd: _CMD, shell: bool = False, prepend_sudo: bool = False,
 ) -> str | list[str]:
     from python.context.system import is_windows
 
@@ -44,8 +43,7 @@ def _convert_cmd(
             raise AppInstallError(
                 problem="Cannot elevate a Windows installer. Rerun the script with elevation.",
             )
-        else:
-            cmd.prepend(["sudo", "-n"])
+        cmd.prepend(["sudo", "-n"])
     if shell:
         return cmd.to_single_string()
     return cmd.to_list()
@@ -58,8 +56,7 @@ def run_interactive(
     check: bool = False,
     timeout: float = TIMEOUT,
 ):
-    """
-    Starts a process where outputs and inputs are piped to the active terminal.
+    """Starts a process where outputs and inputs are piped to the active terminal.
     Nothing is captured
     """
     return subprocess.run(
@@ -72,7 +69,7 @@ def run_interactive(
 
 
 def _monitor(
-    pop: subprocess.Popen[Any], timeout: float, start_time: float, sink: StreamSink
+    pop: subprocess.Popen[Any], timeout: float, start_time: float, sink: StreamSink,
 ) -> int | None:
     try:
         ret_code = pop.poll()
@@ -93,7 +90,7 @@ def _monitor(
                 break
         else:
             inputted = input(
-                    "\033[C\033[C\033[CCtrl-C detected: type S to skip this app, nothing to continue, Ctrl-C to abort the script: "
+                "\033[C\033[C\033[CCtrl-C detected: type S to skip this app, nothing to continue, Ctrl-C to abort the script: ",
             )
             print("\033[A", end="")  # Go up one line
             print("\033[2K", end="")  # Clear line
@@ -140,7 +137,7 @@ def _run(
                 break
         if check and ret_code != 0:
             raise subprocess.CalledProcessError(
-                ret_code, pop.args, sink.dump_output(), sink.dump_error()
+                ret_code, pop.args, sink.dump_output(), sink.dump_error(),
             )
         res = subprocess.CompletedProcess(
             args=_cmd,

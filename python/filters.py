@@ -99,8 +99,7 @@ class ComplexFilter:
         return not (self.not_installers and inst_name in self.not_installers)
 
     def subtract(self, subtract_from: "ComplexFilter") -> "ComplexFilter":
-        """
-        Addes negative filters from the other complex filter
+        """Addes negative filters from the other complex filter
         """
         out = ComplexFilter([])
         out.names = self.names

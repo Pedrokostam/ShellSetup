@@ -3,18 +3,19 @@ from __future__ import annotations
 import datetime
 import json
 import shutil
+import tempfile
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from enum import Enum, StrEnum, auto
 from pathlib import Path
 from sys import stderr
 from typing import Any
-import tempfile
 
 from python import color
 from python.color import _Color, wrap_color
 from python.error import AppInstallError, InstallScriptError
 from python.filters import ComplexFilter
+from python.installation import InstallInstruction
 from python.json_converter import JsonConverter
 
 from .app_request import AppRequest, AppRequestStem
@@ -80,9 +81,10 @@ class AppLog:
     app: AppRequestStem
     status: Status
     details: str
+    installer: str
     process_output: str | None
     date: datetime.datetime = field(
-        default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc)
+        default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc),
     )
 
     @property
@@ -172,6 +174,7 @@ def create_table_payload(app_logs: list[AppLog]):
                 a.status.short_form(),
                 a.app_pretty_name,
                 a.app_group,
+                a.installer,
                 remove_newline(" " + a.details),
             ),
             None,
@@ -200,7 +203,7 @@ def print_many(als: list[AppLog], complex_filter: ComplexFilter | None = None):
         print("No apps to list")
         return
 
-    headers = [" ", "App name", "Group", "Details"]
+    headers = [" ", "App name", "Group", "Installer", "Details"]
     header_limits = tuple(map(len, headers))
 
     strings = create_table_payload(als)
@@ -246,6 +249,11 @@ class Report:
             details = details.message()
         if details is None or len(details.strip()) == 0:
             details = None
+
+        if isinstance(app, AppRequest):
+            installer = app.instructions.instruction_name()
+        else:
+            installer = "N/A"
         details = details or status.details() or ""
 
         al = AppLog(
@@ -253,6 +261,7 @@ class Report:
             status=status,
             app=app.to_stem(),
             details=details,
+            installer=installer,
             process_output=process_output,
         )
         self.app_logs[app.app_name] = al
@@ -274,7 +283,10 @@ class Report:
         details: str | InstallScriptError | AppInstallError | None = None,
     ):
         return self.report(
-            app=app, status=status, details=details, process_output=process_output
+            app=app,
+            status=status,
+            details=details,
+            process_output=process_output,
         )
 
     def report_preinstall(
@@ -283,7 +295,10 @@ class Report:
         details: str | None = None,
     ):
         return self.report(
-            app=app, status=Status.PREINSTALLED, details=details, process_output=None
+            app=app,
+            status=Status.PREINSTALLED,
+            details=details,
+            process_output=None,
         )
 
     def report_skip(
@@ -357,5 +372,5 @@ class Report:
                             payload,
                             indent=True,
                             cls=JsonConverter,
-                        )
+                        ),
                     )

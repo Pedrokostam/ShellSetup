@@ -28,7 +28,7 @@ ps1_res = subprocess.run(ps1_args, capture_output=True, check=False, text=True)
 print()
 if ps1_res.returncode != 0:
     print(
-        "Calling via PowerShell DOES forward the return code! At least the workaround works..."
+        "Calling via PowerShell DOES forward the return code! At least the workaround works...",
     )
 else:
     print(

@@ -75,7 +75,7 @@ class StreamSink:
         self.file_err: BufferedWriter | None = None
 
     def _intercept(
-        self, stream: IO[bytes], target: bytearray, file: BufferedWriter | None = None
+        self, stream: IO[bytes], target: bytearray, file: BufferedWriter | None = None,
     ):
         while True:
             chunk_out = stream.read(8)

@@ -1,6 +1,3 @@
-import traceback
-
-
 class ManualAbortError(Exception):
     pass
 
@@ -38,9 +35,9 @@ class ExecutionSkippedError(InstallScriptError):
     stdout: str
     stderr: str
 
-    def __init__(self, stdout:str, stderr:str):
-        self.stderr=stderr
-        self.stdout=stdout
+    def __init__(self, stdout: str, stderr: str):
+        self.stderr = stderr
+        self.stdout = stdout
         super().__init__("App skipped during installation")
 
     def message(self) -> str:

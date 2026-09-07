@@ -76,7 +76,7 @@ def print_apps(
 
 
 def install(
-    filters: Filters | ComplexFilter | None = None, no_report: bool = False
+    filters: Filters | ComplexFilter | None = None, no_report: bool = False,
 ) -> Report:
     try:
         overseer = Overseer.create_context(filters=filters)

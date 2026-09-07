@@ -21,7 +21,7 @@ def add_time_log(function_name: str, arguments: dict[str, Any], time_seconds: fl
             arguments=arguments,
             time_ms=time_seconds * 1000,
             date=datetime.datetime.now(tz=datetime.timezone.utc),
-        )
+        ),
     )
 
 

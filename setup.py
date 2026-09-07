@@ -29,17 +29,6 @@ def run(cmd, shell: bool = False, **kwargs) -> subprocess.CompletedProcess[str]:
         return extprocess.run_shell(cmd, **kwargs)
     return extprocess.run(cmd, **kwargs)
 
-
-def confirm(prompt: str, assume_yes: bool) -> bool:
-    if assume_yes:
-        return True
-    try:
-        ans = input(prompt + " ").strip().lower()
-    except EOFError:
-        return False
-    return ans == "" or ans.startswith("y")
-
-
 def append_once(file: Path, line: str, marker: str | None = None) -> bool:
     marker = marker or line
     file.parent.mkdir(parents=True, exist_ok=True)
@@ -58,7 +47,7 @@ def setup_git() -> None:
         print("Git is not installed! Aliases will not be added!", file=sys.stderr)
         return
     custom_config_path = str(
-        (paths.SHELL_SETUP_DIR / "git" / "myconfig.gitconfig").resolve()
+        (paths.SHELL_SETUP_DIR / "git" / "myconfig.gitconfig").resolve(),
     )
     output = run(["git", "config", "--global", "--get-all", "include.path"])
     existing = [
@@ -68,7 +57,7 @@ def setup_git() -> None:
     ]
     if os.path.normcase(os.path.normpath(custom_config_path)) in existing:
         print(
-            f"File '{custom_config_path}' already included in the global git configuration"
+            f"File '{custom_config_path}' already included in the global git configuration",
         )
         return
     print(f"Including file '{custom_config_path}' in the global git configuration...")
@@ -101,7 +90,7 @@ def setup_font() -> None:
         print("Cannot install font (oh-my-posh missing)", file=sys.stderr)
         return
     print("Installing font...")
-    extprocess.runndic(["oh-my-posh", "font", "install", font])
+    extprocess.run(["oh-my-posh", "font", "install", font])
 
 
 def setup_omp():
@@ -118,7 +107,7 @@ def setup_pwsh_modules(no_modules: bool = False) -> None:
         print("pwsh not available; skipping module installation.", file=sys.stderr)
         return
     script_path = str(
-        (paths.SHELL_SETUP_DIR / "pwsh" / "Install-Modules.ps1").resolve()
+        (paths.SHELL_SETUP_DIR / "pwsh" / "Install-Modules.ps1").resolve(),
     )
     extprocess.run([pwsh, "-NoProfile", "-File", script_path])
 
@@ -132,7 +121,7 @@ def add_to_powershell_profile(powershell_exe: str):
         )
         return
     profile_path = extprocess.run(
-        [pwsh, "-NoProfile", "-Command", "(Get-Variable Profile).Value"]
+        [pwsh, "-NoProfile", "-Command", "(Get-Variable Profile).Value"],
     ).stdout.strip()
     print("PROFILE PATH: ", profile_path)
     custom = (paths.SHELL_SETUP_DIR / "pwsh" / "Profile_Kostam.ps1").resolve()
@@ -175,7 +164,7 @@ def main() -> None:
         [
             GroupFilter(x)
             for x in ["core", "core_linux", "package_managers", "shells", "languages"]
-        ]
+        ],
     ).subtract(arg_filter)
     print(first_filters)
     initial_report = install(filters=first_filters)

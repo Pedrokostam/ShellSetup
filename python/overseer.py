@@ -56,7 +56,10 @@ def _merge_nodes(file_path: Path, merged: dict[str, Any]):
         default_group_name = str(json_data[K_DEF_GROUP])
     else:
         default_group_name = re.sub(
-            "^apps[-_]*", "", file_path.stem, flags=re.IGNORECASE
+            "^apps[-_]*",
+            "",
+            file_path.stem,
+            flags=re.IGNORECASE,
         )
 
     # platformInstallers
@@ -69,7 +72,8 @@ def _merge_nodes(file_path: Path, merged: dict[str, Any]):
         for curr_plt_key, current_platform in curr_plt_inst.items():
             current_platform: dict[str, Any]
             merged_platform: dict[str, Any] = merged_plt_inst.setdefault(
-                curr_plt_key, {}
+                curr_plt_key,
+                {},
             )
 
             # default installer for platform
@@ -78,7 +82,7 @@ def _merge_nodes(file_path: Path, merged: dict[str, Any]):
                     merged_platform[K_PLT_DEF] = current_platform[K_PLT_DEF]
                 else:
                     raise InstallScriptError(
-                        f"Multiple default installers for a {curr_plt_key}"
+                        f"Multiple default installers for a {curr_plt_key}",
                     )
             # installer list
             if K_INST in current_platform:
@@ -90,7 +94,8 @@ def _merge_nodes(file_path: Path, merged: dict[str, Any]):
                     inst["_file"] = file_path.stem
                 merged_platform.setdefault(K_INST, []).extend(current_platform[K_INST])
                 _assert_no_duplicates(
-                    merged_platform[K_INST], f"installer for {curr_plt_key}"
+                    merged_platform[K_INST],
+                    f"installer for {curr_plt_key}",
                 )
 
     # apps
@@ -118,9 +123,7 @@ class Overseer:
     _all_installable_apps: list[AppRequest] | None = field(repr=False, default=None)
 
     def all_parsable_apps(self):
-        """
-        All app requests that have valid install instruction for the current platform.
-        """
+        """All app requests that have valid install instruction for the current platform."""
         if self._all_parsable_apps is None:
             default_group = self._merged_source_json.get("defaultGroup")
             app_node = self._merged_source_json["apps"]
@@ -136,9 +139,7 @@ class Overseer:
         return self._all_parsable_apps
 
     def all_parsable_stems(self):
-        """
-        All app request stems that are syntactically correct
-        """
+        """All app request stems that are syntactically correct"""
         if self._all_parsable_stems is None:
             default_group = self._merged_source_json.get("defaultGroup")
             app_node = self._merged_source_json["apps"]
@@ -151,9 +152,7 @@ class Overseer:
         return self._all_parsable_stems
 
     def all_installable_apps(self):
-        """
-        All app requests that are not already installed and have available installers
-        """
+        """All app requests that are not already installed and have available installers"""
         if self._all_installable_apps is None:
             reqs = self.all_parsable_apps()
             installable = [r for r in reqs if self.__is_app_installable(r)]
@@ -173,7 +172,7 @@ class Overseer:
         matching_files = sorted(
             f
             for f in apps_json.parent.glob(apps_json.name)
-            if not f.name.lower().startswith("schema")
+            if not f.name.lower().startswith("schema") and not f.name.startswith(".")
         )
         if not matching_files:
             print(f"No app json files matching {apps_json}", file=sys.stderr)
@@ -185,7 +184,7 @@ class Overseer:
         if K_PLT_INST not in json_data:
             raise InstallScriptError(
                 f"No {K_PLT_INST!r} declared in any of: "
-                + ", ".join(f.name for f in matching_files)
+                + ", ".join(f.name for f in matching_files),
             )
         defaults = json_data[K_PLT_INST]
 
@@ -210,7 +209,8 @@ class Overseer:
         _default_installer = _installers[0]
         if default_id := current_platform_installers.get(K_PLT_DEF):
             _default_installer = next(
-                (x for x in _installers if x.name == default_id), _default_installer
+                (x for x in _installers if x.name == default_id),
+                _default_installer,
             )
         for get_plat in _generic_platforms:
             if get_plat == matched_platform:
@@ -227,14 +227,17 @@ class Overseer:
         )
 
     def _parse_install_instruction(
-        self, app: AppRequestStem, node: dict | bool
+        self,
+        app: AppRequestStem,
+        node: dict | bool,
     ) -> InstallInstruction | None:
         assert node != None
         if isinstance(node, bool):
             if not node:
                 return None
             return InstallInstruction(
-                installer=self.default_installer, package_name=app.app_name
+                installer=self.default_installer,
+                package_name=app.app_name,
             )
 
         installer_key: str | None = node.get("installer")
@@ -272,16 +275,18 @@ class Overseer:
             if not matching_installer:
                 raise AppInstallError(problem=f"installer {installer_key} not found")
             return InstallInstruction(
-                installer=matching_installer, package_name=package_name
+                installer=matching_installer,
+                package_name=package_name,
             )
 
         raise JsonSyntaxError(problem="app node contains too little information")
 
     def __parse_app_request_stem(
-        self, node: dict, default_group: AppGroup | None
+        self,
+        node: dict,
+        default_group: AppGroup | None,
     ) -> AppRequestStem:
-        """
-        Parses the JSON node and outputs stems of app request
+        """Parses the JSON node and outputs stems of app request
         No report are done
         """
         default_group = default_group or app_group.DEFAULT_GROUP
@@ -306,13 +311,12 @@ class Overseer:
         )
 
     def __stem_to_full(self, ars: AppRequestStem, node: dict) -> AppRequest | None:
-        """
-        Upgrades a stem to full app request if the installer for the current platform is specified.
+        """Upgrades a stem to full app request if the installer for the current platform is specified.
         Outputs None if not, or if the install instructions are invalid.
         Fails are reported.
         """
         matching_key = target_os.CURRENT_PLATFORM.find_most_concrete_system(
-            [target_os.get_system_from_string(k) for k in node if k != "name"]
+            [target_os.get_system_from_string(k) for k in node if k != "name"],
         )
 
         if matching_key is None:
@@ -344,8 +348,7 @@ class Overseer:
             return None
 
     def __is_app_installable(self, app: AppRequest) -> bool:
-        """
-        Tests the request, checking if the app is already installed and whether the installer is available.
+        """Tests the request, checking if the app is already installed and whether the installer is available.
         Fails are reported
         """
         if app.check_name and any(system.is_app_installed(x) for x in app.check_name):
@@ -384,7 +387,7 @@ class Overseer:
                 x.instructions.instruction_name(): x.instructions
                 for x in app_requests
                 if x.instructions.preparable()
-            }.values()
+            }.values(),
         )
 
         for prep_inst in to_prepare:

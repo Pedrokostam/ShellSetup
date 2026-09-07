@@ -28,7 +28,7 @@ def _list_type(s: str) -> ListType:
     except KeyError:
         choices = ", ".join(t.name.lower() for t in ListType)
         raise argparse.ArgumentTypeError(
-            f"invalid choice: {s!r} (choose from {choices})"
+            f"invalid choice: {s!r} (choose from {choices})",
         )
 
 
@@ -51,7 +51,8 @@ def _common_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-color", action="store_true", help="Disable coloring")
     parser.add_argument("-q", "--quiet", action="store_true")
     filter_group = parser.add_argument_group(
-        "filters", "optional filtering based on name, group or installer"
+        "filters",
+        "optional filtering based on name, group or installer",
     )
     filter_group.add_argument(
         "names_pos",
@@ -128,7 +129,7 @@ def apply_flags(namespace: argparse.Namespace):
         flags.NO_COLOR = True
     if hasattr(namespace, "override_os") and namespace.override_os:
         target_os.CURRENT_PLATFORM = target_os.get_system_from_string(
-            namespace.override_os
+            namespace.override_os,
         )
     # if hasattr(namespace, "json") and namespace.json:
     #     flags.PARSABLE_OUTPUT=True
@@ -137,7 +138,20 @@ def apply_flags(namespace: argparse.Namespace):
 def parse_install_app(description: str | None) -> Filters | ListArgs:
     base_parser = _get_parser(description)
     subs = base_parser.add_subparsers()
-    _add_list_parser_Args(subs.add_parser("list", parents=[_common_parser()]))
+
+    sub_parser = subs.add_parser("list", parents=[_common_parser()])
+    sub_parser.add_argument("--json", action="store_true")
+    sub_parser.add_argument(
+        "type",
+        nargs="?",
+        type=_list_type,
+        default=ListType.INSTALLABLE,
+        help="specify which apps to select",
+    )
+    sub_parser.add_argument(
+        "--override-os", type=str, help="override detected platform"
+    )
+
     namespace = base_parser.parse_args()
     apply_flags(namespace)
     filters = get_filters(namespace)

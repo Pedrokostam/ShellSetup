@@ -147,7 +147,7 @@ class LazySet(collections.abc.Set):
         self._target_function = target_function
         self._data: set[str] = set()
         self._thread = threading.Thread(
-            target=self._populate, args=(self._target_function,), daemon=True
+            target=self._populate, args=(self._target_function,), daemon=True,
         )
         self._thread.start()
 
@@ -177,7 +177,7 @@ class LazySet(collections.abc.Set):
     def refresh(self):
         self._data: set[str] = set()
         self._thread = threading.Thread(
-            target=self._populate, args=(self._target_function,), daemon=True
+            target=self._populate, args=(self._target_function,), daemon=True,
         )
         self._thread.start()
 

@@ -15,17 +15,6 @@ from python.context import flags, logs
 from python.error import ExecutionSkippedError
 from python.stream_sink import StreamSink
 
-INDICATORS = [
-    "[=   ]",
-    "[ =  ]",
-    "[  = ]",
-    "[   =]",
-    "[  = ]",
-    "[ =  ]",
-]
-
-_LAST_LENGTH = 0
-
 
 def timed(func):
     @wraps(func)
@@ -43,7 +32,6 @@ def timed(func):
             arguments.pop("self", None)
             arguments.pop("cls", None)
             logs.add_time_log(func.__name__, arguments, duration)
-            # print(func.__name__, arguments, f" => {duration:.3f}s")
 
     return wrapper
 
@@ -51,12 +39,6 @@ def timed(func):
 PLACEHOLDER_FIND = re.compile(
     r"{([\w\.\, \(\)]+)}",
 )
-
-__NORMALIZER = re.compile(r"[\(\)\.:]")
-
-
-def __normalize_name(s: str) -> str:
-    return __NORMALIZER.sub(s, "_")
 
 
 def __get_root(s: str) -> str:
@@ -85,7 +67,7 @@ def __rebuild_format(format_string: str, val_dict: dict):
 
     parts = []
     for literal, field, format_specifier, conversion in Formatter().parse(
-        format_string
+        format_string,
     ):
         parts.append(literal)
         if field:

@@ -71,7 +71,7 @@ def _get_per_system_elevation(node: dict, platform: AnyOs) -> bool | None:
     fallback = "MISSING"
     plats = platform.get_more_generic_installers(include_self=True)
     for p in plats:
-        platform_val: bool | None | str = val.get(str(p), fallback)
+        platform_val: bool | str | None = val.get(str(p), fallback)
         if isinstance(platform_val, bool) or platform_val is None:
             break
     else:
@@ -95,7 +95,7 @@ class Installer:
     def parse(cls, node: dict):
         _name: str = _raise_if_none(node.get("name"), "Installer name")
         _command: str | Sequence[str] = _raise_if_none(
-            node.get("command"), "Command string"
+            node.get("command"), "Command string",
         )
         _elevated = _get_per_system_elevation(node, target_os.CURRENT_PLATFORM)
         _prepare: str | Sequence[str] | None = node.get("prepare")
@@ -130,7 +130,7 @@ class Installer:
         if a := debug_skip():
             return bool(a)
         result = extprocess.run(
-            self.prepare, prepend_sudo=self.elevation_required == True, **kwargs
+            self.prepare, prepend_sudo=self.elevation_required == True, **kwargs,
         )
         success = result.returncode == 0
         report_installer(self, success)
@@ -141,13 +141,13 @@ class Installer:
         if a := debug_skip():
             return a
         elevation_required = flags.get_elevation_setting(
-            self.name, self.elevation_required
+            self.name, self.elevation_required,
         )
         if is_installer_prepared(self) is None:
             self.prepare_installer()
         if is_installer_prepared(self) == False:
             raise AppInstallError(
-                problem=f"Installer {self.name} could not be prepared"
+                problem=f"Installer {self.name} could not be prepared",
             )
         ready_cmd = self.command.substiture_name(app_name)
         if target_os.is_windows():
@@ -160,14 +160,14 @@ class Installer:
             # else:
             ready_cmd[0] = full_exe_path
         result = extprocess.run(
-            ready_cmd, prepend_sudo=elevation_required == True, **kwargs
+            ready_cmd, prepend_sudo=elevation_required == True, **kwargs,
         )
         if result.returncode != 0:
-            err_msg ="XD: " +(
+            err_msg = "XD: " + (
                 result.stderr.strip()
                 if result.stderr.strip()
                 else result.stdout.strip()
-            ) 
+            )
             raise AppInstallError(
                 problem=err_msg or f"Process exited with code {result.returncode}",
             )
@@ -184,7 +184,7 @@ class Command:
         return True
 
     @one_line_report(
-        initial_msg="Installing {self.app_name;MAGENTA} with custom command… "
+        initial_msg="Installing {self.app_name;MAGENTA} with custom command… ",
     )
     def execute(self, **kwargs) -> str:
         if a := debug_skip():
@@ -193,8 +193,7 @@ class Command:
         if result.returncode != 0:
             if result.stderr:
                 raise AppInstallError(problem=str(result.stderr))
-            else:
-                raise AppInstallError(problem=str(result.stdout))
+            raise AppInstallError(problem=str(result.stdout))
         return str(result.stdout)
 
 
@@ -223,7 +222,7 @@ class Script:
         return self._is_executable
 
     @one_line_report(
-        initial_msg="Installing {self.app_name;MAGENTA} with script {self.script_path;YELLOW}… "
+        initial_msg="Installing {self.app_name;MAGENTA} with script {self.script_path;YELLOW}… ",
     )
     def execute(self, **kwargs) -> str:
         if a := debug_skip():
@@ -237,8 +236,7 @@ class Script:
         if result.returncode != 0:
             if result.stderr:
                 raise AppInstallError(problem=str(result.stderr))
-            else:
-                raise AppInstallError(problem=str(result.stdout))
+            raise AppInstallError(problem=str(result.stdout))
         return str(result.stdout)
 
 
@@ -248,21 +246,22 @@ class InstallInstruction:
     installer: Installer | Command | Script
 
     def instruction_name(self) -> str:
+        """ Th simple one
+        """
         match self.installer:
             case Installer():
                 return self.installer.name
             case Command():
-                return self.installer.cmd
+                return 'command'
             case Script():
-                return self.installer.script_path
+                return 'script'
 
     def installer_name(self) -> str:
         if isinstance(self.installer, Installer):
             return self.installer.name
         if isinstance(self.installer, Script):
             return f"script {self.installer.script_path}"
-        else:
-            return "command"
+        return "command"
 
     def installer_available(self) -> bool:
         return self.installer.is_available()

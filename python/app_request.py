@@ -12,7 +12,7 @@ from .installation import Installer, InstallInstruction
 def _pretty_dict(d: dict) -> str:
     l = []
     norm_keys = [x for x in d if x != "name" and not ("app" in x and "name" in x)] + [
-        "1"
+        "1",
     ]
     max_l = max(len(x) for x in norm_keys)
     for k, v in d.items():
@@ -74,7 +74,7 @@ class AppRequest:
             prepared_set.add(inst.name)
         else:
             raise AppInstallError(
-                problem=f"installer {inst.name} could not be prepared"
+                problem=f"installer {inst.name} could not be prepared",
             )
 
     @classmethod

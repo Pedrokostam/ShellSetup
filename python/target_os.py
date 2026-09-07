@@ -32,24 +32,19 @@ class AnyOs:
         return hash(str(self))
 
     def get_more_generic_installers(self, include_self: bool = False) -> list[str]:
-        """
-        Returns names of all ancestor classes, except for the one in question
-        """
+        """Returns names of all ancestor classes, except for the one in question"""
         if include_self:
             return [str(x()) for x in self._get_matching_system_classes()]
 
-        return [
-            str(x()) for x in self._get_matching_system_classes() if x != type(self)
-        ]
+        return [str(x()) for x in self._get_matching_system_classes() if x is not self]
 
     def _get_matching_system_classes(self):
-        """
-        Get all ancestor classes excluding object
-        """
+        """Get all ancestor classes excluding object"""
         return [cls for cls in type(self).mro() if cls is not object]
 
     def find_most_concrete_system(
-        self, available_systems: list[AnyOs | None]
+        self,
+        available_systems: list[AnyOs | None],
     ) -> AnyOs | None:
         for applicable_os in self._get_matching_system_classes():
             for system_for_app in available_systems:
