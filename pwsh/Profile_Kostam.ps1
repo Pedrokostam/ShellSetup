@@ -5,15 +5,9 @@ if (Get-Command oh-my-posh)
 $global:IdleEventCounter = 0
 if (Get-Command zoxide)
 {
-   $global:EventCommands = @(
-      (& { (zoxide init powershell | Out-String) })
-   )
+   (& { (zoxide init powershell | Out-String) }) | Invoke-Expression
 }
-else
-{
-   $global:EventCommands = @()
-}
-$global:EventCommands = $global:EventCommands + @(
+$global:EventCommands = @(
    'Set-PSReadLineKeyHandler -Chord tab -Function MenuComplete'
    'Import-Module -Name Terminal-Icons -Global'
    'Import-Module -Name Posh -Global'
