@@ -186,11 +186,8 @@ __EXISTING_APPS_MANAGERS = LazySet(get_apps_from_managers)
 
 
 def refresh_PATH():
-
-    if sys.version_info[:2] >= (3, 14):
-        os.reload_environ()
-        return
-
+    # NB: os.reload_environ() (3.14+) only re-reads this process's own env block,
+    # not the Windows registry an installer just wrote, so it is useless here.
     if os.name == "nt":
         import winreg
 
@@ -208,13 +205,20 @@ def refresh_PATH():
             except FileNotFoundError:
                 user_path = ""
         os.environ["PATH"] = f"{system_path};{user_path}"
-    else:
-        shell = os.environ.get("SHELL", "/bin/bash")
+    elif sh := shutil.which("sh"):
+        # POSIX guarantees /bin/sh is a POSIX shell (colon-separated $PATH); a login sh
+        # sources /etc/profile, /etc/profile.d/*.sh and ~/.profile, where user-local
+        # managers append. Using sh (not $SHELL) avoids per-shell syntax churn.
+        # ponytail: misses managers that write only to interactive rc (~/.bashrc etc.);
+        # those are shell-specific by nature and need a re-login.
         new_path = subprocess.check_output(
-            [shell, "-c", "python3 -c \"import os; print(os.environ['PATH'])\""],
-            text=True,
+            [sh, "-lc", 'printf %s "$PATH"'], text=True,
         ).strip()
-        os.environ["PATH"] = os.environ["PATH"] + ":" + new_path
+        merged = []
+        for entry in os.environ["PATH"].split(":") + new_path.split(":"):
+            if entry and entry not in merged:
+                merged.append(entry)
+        os.environ["PATH"] = ":".join(merged)
     none_keys = [k for k, v in __EXISTING_APPS_CALLABLE.items() if v is None]
     for key in none_keys:
         del __EXISTING_APPS_CALLABLE[key]
