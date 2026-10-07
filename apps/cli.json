@@ -61,6 +61,15 @@
             "name": "junegunn.fzf"
          },
          "linux": true
+      },
+      {
+         "name": "lazygit",
+         "windows": {
+            "name": "JesseDuffield.lazygit"
+         },
+         "linux": true,
+         "fedora":false,
+         "opensuse":false
       }
    ]
 }
